@@ -1,0 +1,220 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Grid energy meters",
+        "description": "Pick cumulative counters (kWh) of energy taken from and fed into the grid. They were pre-filled from the Energy dashboard or guessed from sensor names, so check them. Use lifetime totals, not daily counters.",
+        "data": {
+          "import_entity": "Energy bought (grid import)",
+          "export_entity": "Energy sold (grid export)"
+        }
+      },
+      "tariff": {
+        "title": "Seller and tariff",
+        "description": "Seller sets the energy price, the distribution system operator (DSO) is fixed by your address.",
+        "data": {
+          "seller": "Seller",
+          "tariff_group": "Tariff group",
+          "dynamic": "Dynamic (exchange-indexed) price",
+          "dso": "Distribution system operator",
+          "phases": "Connection phases",
+          "sale_mode": "Export settlement"
+        },
+        "data_description": {
+          "dynamic": "Energy price follows the day-ahead market (TGE Fixing I = PSE RCE) plus the seller's markup. Distribution is still charged by the tariff group.",
+          "sale_mode": "Net-billing: RCE = 15-minute/hourly market price, RCEm = monthly average."
+        }
+      },
+      "prices": {
+        "title": "Prices",
+        "description": "Net prices without VAT. Bundled data verified: {verified}. Sources:\n{sources}\n\nEmpty fields have no bundled value yet; copy them from your contract or tariff.",
+        "data": {
+          "energy_peak": "Energy price (day / single zone)",
+          "energy_offpeak": "Energy price (off-peak zone)",
+          "dynamic_markup": "Seller markup on exchange price",
+          "dist_peak": "Variable distribution charges (day / single zone)",
+          "dist_offpeak": "Variable distribution charges (off-peak zone)",
+          "offpeak_hours": "Off-peak hours",
+          "weekend_offpeak": "Weekends are off-peak",
+          "holiday_offpeak": "Public holidays are off-peak",
+          "fixed_monthly": "Fixed monthly fees",
+          "vat": "VAT rate",
+          "deposit_multiplier": "Deposit multiplier",
+          "clamp_negative_rce": "Treat negative RCE as zero"
+        },
+        "data_description": {
+          "dist_peak": "Sum of the variable network charge, quality charge, OZE and cogeneration charges per kWh.",
+          "offpeak_hours": "Comma separated ranges, e.g. 13-15,22-6",
+          "fixed_monthly": "Trade fee, fixed network charge, subscription, capacity and transitional charges, net.",
+          "deposit_multiplier": "Factor applied to the value of exported energy, if your settlement uses one."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Import and export must be different sensors.",
+      "invalid_hours": "Use ranges like 13-15,22-6."
+    },
+    "abort": {
+      "already_configured": "This meter is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Meters and tariff",
+        "data": {
+          "import_entity": "Energy bought (grid import)",
+          "export_entity": "Energy sold (grid export)",
+          "seller": "Seller",
+          "tariff_group": "Tariff group",
+          "dynamic": "Dynamic (exchange-indexed) price",
+          "dso": "Distribution system operator",
+          "phases": "Connection phases",
+          "sale_mode": "Export settlement"
+        },
+        "data_description": {
+          "dynamic": "Energy price follows the day-ahead market (TGE Fixing I = PSE RCE) plus the seller's markup. Distribution is still charged by the tariff group.",
+          "sale_mode": "Net-billing: RCE = 15-minute/hourly market price, RCEm = monthly average."
+        }
+      },
+      "prices": {
+        "title": "Prices",
+        "description": "Net prices without VAT. Bundled data verified: {verified}. Sources:\n{sources}\n\nEmpty fields have no bundled value yet; copy them from your contract or tariff.",
+        "data": {
+          "energy_peak": "Energy price (day / single zone)",
+          "energy_offpeak": "Energy price (off-peak zone)",
+          "dynamic_markup": "Seller markup on exchange price",
+          "dist_peak": "Variable distribution charges (day / single zone)",
+          "dist_offpeak": "Variable distribution charges (off-peak zone)",
+          "offpeak_hours": "Off-peak hours",
+          "weekend_offpeak": "Weekends are off-peak",
+          "holiday_offpeak": "Public holidays are off-peak",
+          "fixed_monthly": "Fixed monthly fees",
+          "vat": "VAT rate",
+          "deposit_multiplier": "Deposit multiplier",
+          "clamp_negative_rce": "Treat negative RCE as zero"
+        },
+        "data_description": {
+          "dist_peak": "Sum of the variable network charge, quality charge, OZE and cogeneration charges per kWh.",
+          "offpeak_hours": "Comma separated ranges, e.g. 13-15,22-6",
+          "fixed_monthly": "Trade fee, fixed network charge, subscription, capacity and transitional charges, net.",
+          "deposit_multiplier": "Factor applied to the value of exported energy, if your settlement uses one."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Import and export must be different sensors.",
+      "invalid_hours": "Use ranges like 13-15,22-6."
+    }
+  },
+  "selector": {
+    "seller": {
+      "options": {
+        "tauron": "TAURON Sprzedaż",
+        "pge": "PGE Obrót",
+        "enea": "Enea",
+        "energa": "Energa Obrót",
+        "eon": "E.ON Polska",
+        "other": "Other / enter manually"
+      }
+    },
+    "dso": {
+      "options": {
+        "tauron_dystrybucja": "TAURON Dystrybucja",
+        "pge_dystrybucja": "PGE Dystrybucja",
+        "enea_operator": "Enea Operator",
+        "energa_operator": "Energa Operator",
+        "stoen_operator": "Stoen Operator",
+        "other": "Other / enter manually"
+      }
+    },
+    "tariff_group": {
+      "options": {
+        "G11": "G11",
+        "G12": "G12",
+        "G12w": "G12w"
+      }
+    },
+    "phases": {
+      "options": {
+        "1": "Single-phase",
+        "3": "Three-phase"
+      }
+    },
+    "sale_mode": {
+      "options": {
+        "rce": "RCE (15 min / hourly)",
+        "rcem": "RCEm (monthly)"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "purchase_cost_today": {
+        "name": "Purchase cost today"
+      },
+      "sale_revenue_today": {
+        "name": "Sale revenue today"
+      },
+      "balance_today": {
+        "name": "Balance today"
+      },
+      "purchase_cost_month": {
+        "name": "Purchase cost this month"
+      },
+      "sale_revenue_month": {
+        "name": "Sale revenue this month"
+      },
+      "balance_month": {
+        "name": "Balance this month"
+      },
+      "purchase_cost_year": {
+        "name": "Purchase cost this year"
+      },
+      "sale_revenue_year": {
+        "name": "Sale revenue this year"
+      },
+      "balance_year": {
+        "name": "Balance this year"
+      },
+      "purchase_cost_total": {
+        "name": "Purchase cost total"
+      },
+      "sale_revenue_total": {
+        "name": "Sale revenue total"
+      },
+      "buy_price": {
+        "name": "Current buy price"
+      },
+      "sell_price": {
+        "name": "Current sell price"
+      }
+    }
+  },
+  "issues": {
+    "tariffs_outdated": {
+      "title": "Energy Wallet tariffs are outdated",
+      "description": "The bundled tariff data is for {catalog_year}, but it is {year} now. Update the integration or correct the prices in its options."
+    }
+  },
+  "services": {
+    "set_rcem": {
+      "name": "Set RCEm",
+      "description": "Set the official monthly RCEm price for a month, or clear it to use the estimate.",
+      "fields": {
+        "month": {
+          "name": "Month",
+          "description": "Month in YYYY-MM format."
+        },
+        "price": {
+          "name": "Price",
+          "description": "RCEm in PLN/kWh. Leave empty to clear."
+        },
+        "config_entry_id": {
+          "name": "Wallet",
+          "description": "Limit to one wallet; all when empty."
+        }
+      }
+    }
+  }
+}

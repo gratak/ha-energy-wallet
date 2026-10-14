@@ -1,0 +1,123 @@
+{
+  "year": 2026,
+  "valid_from": "2026-01-01",
+  "valid_to": "2026-12-31",
+  "notes": "Net prices (bez VAT) in PLN. null = not known yet, the config flow asks the user. 'verified': true only after checking the official tariff PDF. 'per_kwh' holds the remaining variable distribution charges (jakościowa, OZE, kogeneracyjna); opłata mocowa depends on yearly consumption and is left to the user.",
+  "sellers": {
+    "tauron": {
+      "name": "TAURON Sprzedaż",
+      "tariffs": {
+        "G11": {
+          "energy": {"peak": 0.497},
+          "fee_monthly": null,
+          "verified": false,
+          "sources": ["https://muratordom.pl/prawo/finanse/ile-zaplacisz-za-prad-w-2026-r-aa-1t2X-FBQU-t5cM.html"]
+        },
+        "G12": {"energy": {"peak": null, "offpeak": null}, "fee_monthly": null, "verified": false, "sources": []},
+        "G12w": {"energy": {"peak": null, "offpeak": null}, "fee_monthly": null, "verified": false, "sources": []}
+      },
+      "dynamic": {"markup": null, "fee_monthly": null, "verified": false, "sources": []}
+    },
+    "pge": {
+      "name": "PGE Obrót",
+      "tariffs": {
+        "G11": {
+          "energy": {"peak": 0.4982},
+          "fee_monthly": null,
+          "verified": false,
+          "sources": ["https://globenergia.pl/ceny-pradu-w-2026-roku-sprawdz-ile-zaplacisz-czy-bedzie-drozej/"]
+        }
+      },
+      "dynamic": {"markup": null, "fee_monthly": null, "verified": false, "sources": []}
+    },
+    "enea": {
+      "name": "Enea",
+      "tariffs": {
+        "G11": {
+          "energy": {"peak": 0.498},
+          "fee_monthly": null,
+          "verified": false,
+          "sources": ["https://globenergia.pl/ceny-pradu-w-2026-roku-sprawdz-ile-zaplacisz-czy-bedzie-drozej/"]
+        }
+      },
+      "dynamic": {"markup": null, "fee_monthly": null, "verified": false, "sources": []}
+    },
+    "energa": {
+      "name": "Energa Obrót",
+      "tariffs": {
+        "G11": {
+          "energy": {"peak": 0.4968},
+          "fee_monthly": null,
+          "verified": false,
+          "sources": ["https://globenergia.pl/ceny-pradu-w-2026-roku-sprawdz-ile-zaplacisz-czy-bedzie-drozej/"]
+        }
+      },
+      "dynamic": {"markup": null, "fee_monthly": null, "verified": false, "sources": []}
+    },
+    "eon": {
+      "name": "E.ON Polska",
+      "tariffs": {},
+      "dynamic": {"markup": null, "fee_monthly": null, "verified": false, "sources": []}
+    }
+  },
+  "dsos": {
+    "tauron_dystrybucja": {
+      "name": "TAURON Dystrybucja",
+      "groups": {
+        "G11": {
+          "offpeak": [],
+          "variable": {"peak": null},
+          "per_kwh": {"quality": null, "oze": null, "cogeneration": null},
+          "fixed_monthly": {"1": 7.38, "3": 10.86},
+          "subscription_monthly": null,
+          "transitional_monthly": null,
+          "verified": false,
+          "sources": [
+            "https://muratordom.pl/prawo/finanse/ile-zaplacisz-za-prad-w-2026-r-aa-1t2X-FBQU-t5cM.html",
+            "https://www.tauron-dystrybucja.pl/-/media/offer-documents/dystrybucja/aktualna-taryfa/wyciag-z-taryfy-td-sa-na-rok-2026-dla-odbiorcow-grup-g.ashx"
+          ]
+        },
+        "G12": {
+          "offpeak": ["13-15", "22-6"],
+          "variable": {"peak": null, "offpeak": null},
+          "per_kwh": {"quality": null, "oze": null, "cogeneration": null},
+          "fixed_monthly": {"1": null, "3": null},
+          "subscription_monthly": null,
+          "transitional_monthly": null,
+          "verified": false,
+          "sources": ["https://www.tauron-dystrybucja.pl/-/media/offer-documents/dystrybucja/aktualna-taryfa/wyciag-z-taryfy-td-sa-na-rok-2026-dla-odbiorcow-grup-g.ashx"]
+        },
+        "G12w": {
+          "offpeak": ["13-15", "22-6"],
+          "weekend_offpeak": true,
+          "holiday_offpeak": true,
+          "variable": {"peak": null, "offpeak": null},
+          "per_kwh": {"quality": null, "oze": null, "cogeneration": null},
+          "fixed_monthly": {"1": null, "3": null},
+          "subscription_monthly": null,
+          "transitional_monthly": null,
+          "verified": false,
+          "sources": ["https://www.tauron-dystrybucja.pl/-/media/offer-documents/dystrybucja/aktualna-taryfa/wyciag-z-taryfy-td-sa-na-rok-2026-dla-odbiorcow-grup-g.ashx"]
+        }
+      }
+    },
+    "pge_dystrybucja": {
+      "name": "PGE Dystrybucja",
+      "groups": {
+        "G11": {
+          "offpeak": [],
+          "variable": {"peak": 0.3469},
+          "per_kwh": {"quality": null, "oze": null, "cogeneration": null},
+          "fixed_monthly": {"1": 5.50, "3": 9.98},
+          "subscription_monthly": null,
+          "transitional_monthly": null,
+          "verified": false,
+          "sources": ["https://muratordom.pl/prawo/finanse/ile-zaplacisz-za-prad-w-2026-r-aa-1t2X-FBQU-t5cM.html"]
+        }
+      }
+    },
+    "enea_operator": {"name": "Enea Operator", "groups": {}},
+    "energa_operator": {"name": "Energa Operator", "groups": {}},
+    "stoen_operator": {"name": "Stoen Operator", "groups": {}}
+  }
+}

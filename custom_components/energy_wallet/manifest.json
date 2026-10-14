@@ -1,0 +1,21 @@
+{
+  "domain": "energy_wallet",
+  "name": "Energy Wallet",
+  "after_dependencies": [
+    "energy",
+    "frontend"
+  ],
+  "codeowners": [
+    "@gratak"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "http"
+  ],
+  "documentation": "https://github.com/gratak/ha-energy-wallet",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/gratak/ha-energy-wallet/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

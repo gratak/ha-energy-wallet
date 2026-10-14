@@ -1,0 +1,220 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Liczniki energii z sieci",
+        "description": "Wybierz liczniki narastające (kWh) energii pobranej z sieci i oddanej do sieci. Wartości podpowiedziano z Energy Dashboard albo po nazwach sensorów, więc sprawdź je. Używaj liczników całkowitych, nie dziennych.",
+        "data": {
+          "import_entity": "Energia kupiona (pobór z sieci)",
+          "export_entity": "Energia sprzedana (oddanie do sieci)"
+        }
+      },
+      "tariff": {
+        "title": "Sprzedawca i taryfa",
+        "description": "Sprzedawca ustala cenę energii, a dystrybutora (OSD) wyznacza adres przyłącza.",
+        "data": {
+          "seller": "Sprzedawca",
+          "tariff_group": "Grupa taryfowa",
+          "dynamic": "Cena dynamiczna (giełdowa)",
+          "dso": "Dystrybutor (OSD)",
+          "phases": "Liczba faz przyłącza",
+          "sale_mode": "Rozliczenie oddanej energii"
+        },
+        "data_description": {
+          "dynamic": "Cena energii zależy od RDN (Fixing I TGE = RCE PSE) plus marża sprzedawcy. Dystrybucja nadal liczona jest wg grupy taryfowej.",
+          "sale_mode": "Net-billing: RCE = cena rynkowa 15-minutowa/godzinowa, RCEm = średnia miesięczna."
+        }
+      },
+      "prices": {
+        "title": "Ceny",
+        "description": "Ceny netto bez VAT. Dane wbudowane zweryfikowane: {verified}. Źródła:\n{sources}\n\nPuste pola nie mają jeszcze wartości w integracji; przepisz je z umowy lub taryfy.",
+        "data": {
+          "energy_peak": "Cena energii (strefa dzienna / całodobowa)",
+          "energy_offpeak": "Cena energii (strefa nocna/tańsza)",
+          "dynamic_markup": "Marża sprzedawcy do ceny giełdowej",
+          "dist_peak": "Zmienne opłaty dystrybucyjne (strefa dzienna / całodobowa)",
+          "dist_offpeak": "Zmienne opłaty dystrybucyjne (strefa tańsza)",
+          "offpeak_hours": "Godziny strefy tańszej",
+          "weekend_offpeak": "Weekendy w strefie tańszej",
+          "holiday_offpeak": "Święta w strefie tańszej",
+          "fixed_monthly": "Opłaty stałe miesięcznie",
+          "vat": "Stawka VAT",
+          "deposit_multiplier": "Mnożnik depozytu",
+          "clamp_negative_rce": "Ujemne RCE licz jako zero"
+        },
+        "data_description": {
+          "dist_peak": "Suma za kWh: opłata sieciowa zmienna, jakościowa, OZE i kogeneracyjna.",
+          "offpeak_hours": "Zakresy po przecinku, np. 13-15,22-6",
+          "fixed_monthly": "Opłata handlowa, sieciowa stała, abonamentowa, mocowa i przejściowa, netto.",
+          "deposit_multiplier": "Współczynnik dla wartości energii oddanej, jeśli Twoje rozliczenie go stosuje."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Pobór i oddanie muszą być różnymi sensorami.",
+      "invalid_hours": "Użyj zakresów w formacie 13-15,22-6."
+    },
+    "abort": {
+      "already_configured": "Ten licznik jest już skonfigurowany."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Liczniki i taryfa",
+        "data": {
+          "import_entity": "Energia kupiona (pobór z sieci)",
+          "export_entity": "Energia sprzedana (oddanie do sieci)",
+          "seller": "Sprzedawca",
+          "tariff_group": "Grupa taryfowa",
+          "dynamic": "Cena dynamiczna (giełdowa)",
+          "dso": "Dystrybutor (OSD)",
+          "phases": "Liczba faz przyłącza",
+          "sale_mode": "Rozliczenie oddanej energii"
+        },
+        "data_description": {
+          "dynamic": "Cena energii zależy od RDN (Fixing I TGE = RCE PSE) plus marża sprzedawcy. Dystrybucja nadal liczona jest wg grupy taryfowej.",
+          "sale_mode": "Net-billing: RCE = cena rynkowa 15-minutowa/godzinowa, RCEm = średnia miesięczna."
+        }
+      },
+      "prices": {
+        "title": "Ceny",
+        "description": "Ceny netto bez VAT. Dane wbudowane zweryfikowane: {verified}. Źródła:\n{sources}\n\nPuste pola nie mają jeszcze wartości w integracji; przepisz je z umowy lub taryfy.",
+        "data": {
+          "energy_peak": "Cena energii (strefa dzienna / całodobowa)",
+          "energy_offpeak": "Cena energii (strefa nocna/tańsza)",
+          "dynamic_markup": "Marża sprzedawcy do ceny giełdowej",
+          "dist_peak": "Zmienne opłaty dystrybucyjne (strefa dzienna / całodobowa)",
+          "dist_offpeak": "Zmienne opłaty dystrybucyjne (strefa tańsza)",
+          "offpeak_hours": "Godziny strefy tańszej",
+          "weekend_offpeak": "Weekendy w strefie tańszej",
+          "holiday_offpeak": "Święta w strefie tańszej",
+          "fixed_monthly": "Opłaty stałe miesięcznie",
+          "vat": "Stawka VAT",
+          "deposit_multiplier": "Mnożnik depozytu",
+          "clamp_negative_rce": "Ujemne RCE licz jako zero"
+        },
+        "data_description": {
+          "dist_peak": "Suma za kWh: opłata sieciowa zmienna, jakościowa, OZE i kogeneracyjna.",
+          "offpeak_hours": "Zakresy po przecinku, np. 13-15,22-6",
+          "fixed_monthly": "Opłata handlowa, sieciowa stała, abonamentowa, mocowa i przejściowa, netto.",
+          "deposit_multiplier": "Współczynnik dla wartości energii oddanej, jeśli Twoje rozliczenie go stosuje."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Pobór i oddanie muszą być różnymi sensorami.",
+      "invalid_hours": "Użyj zakresów w formacie 13-15,22-6."
+    }
+  },
+  "selector": {
+    "seller": {
+      "options": {
+        "tauron": "TAURON Sprzedaż",
+        "pge": "PGE Obrót",
+        "enea": "Enea",
+        "energa": "Energa Obrót",
+        "eon": "E.ON Polska",
+        "other": "Inny / wpiszę ręcznie"
+      }
+    },
+    "dso": {
+      "options": {
+        "tauron_dystrybucja": "TAURON Dystrybucja",
+        "pge_dystrybucja": "PGE Dystrybucja",
+        "enea_operator": "Enea Operator",
+        "energa_operator": "Energa Operator",
+        "stoen_operator": "Stoen Operator",
+        "other": "Inny / wpiszę ręcznie"
+      }
+    },
+    "tariff_group": {
+      "options": {
+        "G11": "G11",
+        "G12": "G12",
+        "G12w": "G12w"
+      }
+    },
+    "phases": {
+      "options": {
+        "1": "Jednofazowe",
+        "3": "Trójfazowe"
+      }
+    },
+    "sale_mode": {
+      "options": {
+        "rce": "RCE (15 min / godzinowe)",
+        "rcem": "RCEm (miesięczne)"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "purchase_cost_today": {
+        "name": "Koszt zakupu dziś"
+      },
+      "sale_revenue_today": {
+        "name": "Przychód ze sprzedaży dziś"
+      },
+      "balance_today": {
+        "name": "Bilans dziś"
+      },
+      "purchase_cost_month": {
+        "name": "Koszt zakupu w tym miesiącu"
+      },
+      "sale_revenue_month": {
+        "name": "Przychód ze sprzedaży w tym miesiącu"
+      },
+      "balance_month": {
+        "name": "Bilans w tym miesiącu"
+      },
+      "purchase_cost_year": {
+        "name": "Koszt zakupu w tym roku"
+      },
+      "sale_revenue_year": {
+        "name": "Przychód ze sprzedaży w tym roku"
+      },
+      "balance_year": {
+        "name": "Bilans w tym roku"
+      },
+      "purchase_cost_total": {
+        "name": "Koszt zakupu łącznie"
+      },
+      "sale_revenue_total": {
+        "name": "Przychód ze sprzedaży łącznie"
+      },
+      "buy_price": {
+        "name": "Aktualna cena zakupu"
+      },
+      "sell_price": {
+        "name": "Aktualna cena sprzedaży"
+      }
+    }
+  },
+  "issues": {
+    "tariffs_outdated": {
+      "title": "Taryfy w Energy Wallet są nieaktualne",
+      "description": "Wbudowane dane taryf są z roku {catalog_year}, a mamy {year}. Zaktualizuj integrację albo popraw ceny w jej opcjach."
+    }
+  },
+  "services": {
+    "set_rcem": {
+      "name": "Ustaw RCEm",
+      "description": "Ustaw oficjalną miesięczną cenę RCEm albo wyczyść ją, aby używać szacunku.",
+      "fields": {
+        "month": {
+          "name": "Miesiąc",
+          "description": "Miesiąc w formacie RRRR-MM."
+        },
+        "price": {
+          "name": "Cena",
+          "description": "RCEm w zł/kWh. Puste = wyczyść."
+        },
+        "config_entry_id": {
+          "name": "Portfel",
+          "description": "Ogranicz do jednego portfela; puste = wszystkie."
+        }
+      }
+    }
+  }
+}

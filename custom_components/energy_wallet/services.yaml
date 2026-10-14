@@ -1,0 +1,22 @@
+set_rcem:
+  fields:
+    month:
+      required: true
+      example: "2026-09"
+      selector:
+        text:
+    price:
+      required: false
+      example: 0.2871
+      selector:
+        number:
+          min: 0
+          max: 5
+          step: any
+          mode: box
+          unit_of_measurement: PLN/kWh
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: energy_wallet

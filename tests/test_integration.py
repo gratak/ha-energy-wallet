@@ -1,0 +1,197 @@
+"""End-to-end tests inside a real Home Assistant instance."""
+
+from datetime import datetime, timedelta
+
+from freezegun.api import FrozenDateTimeFactory
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
+
+from homeassistant import config_entries
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
+
+from custom_components.energy_wallet.const import DOMAIN
+from custom_components.energy_wallet.pse import PSE_RCE_URL
+
+IMP = "sensor.deye_inverter_totalenergybuy"
+EXP = "sensor.deye_inverter_totalenergysell"
+ATTRS = {"unit_of_measurement": "kWh", "state_class": "total", "device_class": "energy"}
+
+BASE = {
+    "import_entity": IMP,
+    "export_entity": EXP,
+    "seller": "tauron",
+    "tariff_group": "G11",
+    "dynamic": False,
+    "dso": "tauron_dystrybucja",
+    "phases": "3",
+    "sale_mode": "rce",
+    "energy_peak": 0.5,
+    "dist_peak": 0.3,
+    "fixed_monthly": 20.0,
+    "vat": 0.23,
+    "deposit_multiplier": 1.0,
+    "clamp_negative_rce": True,
+}
+
+
+def rce_payload(day: str, price: float) -> dict:
+    values = []
+    start = datetime.fromisoformat(f"{day}T00:00")
+    for i in range(96):
+        end = start + timedelta(minutes=15 * (i + 1))
+        dtime = f"{day} 24:00:00" if i == 95 else end.strftime("%Y-%m-%d %H:%M:%S")
+        values.append({"business_date": day, "dtime": dtime, "period": "", "rce_pln": price})
+    return {"value": values}
+
+
+def value(hass: HomeAssistant, entry: MockConfigEntry, key: str):
+    entity_id = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_{key}")
+    return hass.states.get(entity_id)
+
+
+@pytest.fixture
+async def setup_states(hass: HomeAssistant):
+    await hass.config.async_set_time_zone("Europe/Warsaw")
+    hass.states.async_set(IMP, "16.5", {**ATTRS, "friendly_name": "Deye Inverter TotalEnergyBuy"})
+    hass.states.async_set(EXP, "0.2", {**ATTRS, "friendly_name": "Deye Inverter TotalEnergySell"})
+    hass.states.async_set("sensor.deye_daily_energy_purchased", "0.3", {**ATTRS, "friendly_name": "Daily Energy Purchased"})
+
+
+async def test_config_flow_detects_and_creates(hass: HomeAssistant, setup_states, aioclient_mock) -> None:
+    aioclient_mock.get(PSE_RCE_URL, json={"value": []})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    assert result["type"] is FlowResultType.FORM
+    schema = {str(k): k.default() for k in result["data_schema"].schema if callable(getattr(k, "default", None))}
+    assert schema["import_entity"] == IMP
+    assert schema["export_entity"] == EXP
+
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"import_entity": IMP, "export_entity": EXP})
+    assert result["step_id"] == "tariff"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"seller": "tauron", "tariff_group": "G12w", "dynamic": False, "dso": "tauron_dystrybucja", "phases": "3", "sale_mode": "rce"},
+    )
+    assert result["step_id"] == "prices"
+    keys = {str(k) for k in result["data_schema"].schema}
+    assert {"energy_offpeak", "dist_offpeak", "offpeak_hours", "weekend_offpeak"} <= keys
+    assert "⚠️" in result["description_placeholders"]["verified"]
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"energy_peak": 0.6, "energy_offpeak": 0.4, "dist_peak": 0.3, "dist_offpeak": 0.1, "offpeak_hours": "nonsense",
+         "weekend_offpeak": True, "holiday_offpeak": True, "fixed_monthly": 25, "vat": 0.23,
+         "deposit_multiplier": 1.0, "clamp_negative_rce": True},
+    )
+    assert result["errors"] == {"offpeak_hours": "invalid_hours"}
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"energy_peak": 0.6, "energy_offpeak": 0.4, "dist_peak": 0.3, "dist_offpeak": 0.1, "offpeak_hours": "13-15,22-6",
+         "weekend_offpeak": True, "holiday_offpeak": True, "fixed_monthly": 25, "vat": 0.23,
+         "deposit_multiplier": 1.0, "clamp_negative_rce": True},
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"]["tariff_group"] == "G12w"
+    await hass.async_block_till_done()
+
+
+async def test_wallet_counts_money(hass: HomeAssistant, setup_states, aioclient_mock, freezer: FrozenDateTimeFactory) -> None:
+    freezer.move_to("2026-10-14T10:02:00+00:00")
+    today = dt_util.now().date().isoformat()
+    aioclient_mock.get(PSE_RCE_URL, json=rce_payload(today, 400.0))
+
+    entry = MockConfigEntry(domain=DOMAIN, data=BASE, title="Energy Wallet")
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    # Bought 1 kWh and sold 2 kWh a few minutes later.
+    freezer.tick(timedelta(minutes=5))
+    hass.states.async_set(IMP, "17.5", ATTRS)
+    hass.states.async_set(EXP, "2.2", ATTRS)
+    await hass.async_block_till_done()
+
+    cost = value(hass, entry, "purchase_cost_today")
+    revenue = value(hass, entry, "sale_revenue_today")
+    balance = value(hass, entry, "balance_today")
+    assert float(cost.state) == pytest.approx((0.5 + 0.3) * 1.23)
+    assert cost.attributes["energy_kwh"] == pytest.approx(1.0)
+    assert float(revenue.state) == pytest.approx(2 * 0.4)
+    assert float(balance.state) == pytest.approx(0.8 - 0.984)
+    assert balance.attributes["fixed_monthly_gross"] == pytest.approx(24.6)
+    assert cost.attributes["energy_wallet"]["role"] == "purchase_cost"
+    assert float(value(hass, entry, "sell_price").state) == pytest.approx(0.4)
+    assert float(value(hass, entry, "buy_price").state) == pytest.approx(0.984)
+
+    # A glitch to zero and back must not double count.
+    hass.states.async_set(IMP, "0", ATTRS)
+    await hass.async_block_till_done()
+    hass.states.async_set(IMP, "17.5", ATTRS)
+    await hass.async_block_till_done()
+    assert value(hass, entry, "purchase_cost_today").attributes["energy_kwh"] == pytest.approx(1.0)
+
+    # Survives a reload.
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert float(value(hass, entry, "sale_revenue_month").state) == pytest.approx(0.8)
+
+    # Service override switches RCEm estimate.
+    hass.config_entries.async_update_entry(entry, options={**BASE, "sale_mode": "rcem"})
+    await hass.async_block_till_done()
+    await hass.services.async_call(DOMAIN, "set_rcem", {"month": today[:7], "price": 0.3}, blocking=True)
+    await hass.async_block_till_done()
+    assert float(value(hass, entry, "sale_revenue_month").state) == pytest.approx(0.6)
+
+    freezer.tick(timedelta(minutes=15))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+
+async def test_dynamic_waits_for_price(hass: HomeAssistant, setup_states, aioclient_mock, freezer) -> None:
+    freezer.move_to("2026-10-14T10:02:00+00:00")
+    aioclient_mock.get(PSE_RCE_URL, json={"value": []})
+    entry = MockConfigEntry(domain=DOMAIN, data={**BASE, "dynamic": True, "dynamic_markup": 0.05}, title="Energy Wallet")
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    freezer.tick(timedelta(minutes=5))
+    hass.states.async_set(IMP, "18.5", ATTRS)
+    await hass.async_block_till_done()
+    cost = value(hass, entry, "purchase_cost_today")
+    assert float(cost.state) == 0
+    assert cost.attributes["energy_kwh"] == pytest.approx(2.0)
+    assert value(hass, entry, "buy_price").state == "unknown"
+
+
+async def test_options_flow_resets_prices_on_tariff_change(hass: HomeAssistant, setup_states, aioclient_mock) -> None:
+    aioclient_mock.get(PSE_RCE_URL, json={"value": []})
+    entry = MockConfigEntry(domain=DOMAIN, data=BASE, title="Energy Wallet")
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["step_id"] == "init"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {"import_entity": IMP, "export_entity": EXP, "seller": "tauron", "tariff_group": "G11", "dynamic": True,
+         "dso": "tauron_dystrybucja", "phases": "3", "sale_mode": "rcem"},
+    )
+    assert result["step_id"] == "prices"
+    keys = {str(k): k for k in result["data_schema"].schema}
+    assert "dynamic_markup" in keys and "energy_peak" not in keys
+    # The old distribution price must not be carried over silently once the tariff changed.
+    assert not callable(getattr(keys["dist_peak"], "default", None)) or keys["dist_peak"].default() is None
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {"dynamic_markup": 0.06, "dist_peak": 0.31, "fixed_monthly": 22, "vat": 0.23,
+         "deposit_multiplier": 1.0, "clamp_negative_rce": True},
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done()
+    assert entry.options["dynamic"] is True
+    assert entry.runtime_data.prices.dynamic_markup == pytest.approx(0.06)
