@@ -18,11 +18,13 @@
           "dynamic": "Cena dynamiczna (giełdowa)",
           "dso": "Dystrybutor (OSD)",
           "phases": "Liczba faz przyłącza",
+          "capacity_tier": "Roczne zużycie (opłata mocowa)",
           "sale_mode": "Rozliczenie oddanej energii"
         },
         "data_description": {
           "dynamic": "Cena energii zależy od RDN (Fixing I TGE = RCE PSE) plus marża sprzedawcy. Dystrybucja nadal liczona jest wg grupy taryfowej.",
-          "sale_mode": "Net-billing: RCE = cena rynkowa 15-minutowa/godzinowa, RCEm = średnia miesięczna."
+          "sale_mode": "Net-billing: RCE = cena rynkowa 15-minutowa/godzinowa, RCEm = średnia miesięczna.",
+          "capacity_tier": "Opłata mocowa to ryczałt miesięczny zależny od rocznego poboru z sieci."
         }
       },
       "prices": {
@@ -35,6 +37,8 @@
           "dist_peak": "Zmienne opłaty dystrybucyjne (strefa dzienna / całodobowa)",
           "dist_offpeak": "Zmienne opłaty dystrybucyjne (strefa tańsza)",
           "offpeak_hours": "Godziny strefy tańszej",
+          "offpeak_hours_summer": "Godziny strefy tańszej latem (kwiecień-wrzesień)",
+          "excise": "Akcyza",
           "weekend_offpeak": "Weekendy w strefie tańszej",
           "holiday_offpeak": "Święta w strefie tańszej",
           "fixed_monthly": "Opłaty stałe miesięcznie",
@@ -46,6 +50,8 @@
           "dist_peak": "Suma za kWh: opłata sieciowa zmienna, jakościowa, OZE i kogeneracyjna.",
           "offpeak_hours": "Zakresy po przecinku, np. 13-15,22-6",
           "fixed_monthly": "Opłata handlowa, sieciowa stała, abonamentowa, mocowa i przejściowa, netto.",
+          "offpeak_hours_summer": "Tylko jeśli OSD zmienia strefy latem (np. PGE: 15-17,22-6). W przeciwnym razie zostaw puste.",
+          "excise": "Akcyza za kWh, doliczana do ceny energii przed VAT (0,005 zł/kWh).",
           "deposit_multiplier": "Współczynnik dla wartości energii oddanej, jeśli Twoje rozliczenie go stosuje."
         }
       }
@@ -70,11 +76,13 @@
           "dynamic": "Cena dynamiczna (giełdowa)",
           "dso": "Dystrybutor (OSD)",
           "phases": "Liczba faz przyłącza",
+          "capacity_tier": "Roczne zużycie (opłata mocowa)",
           "sale_mode": "Rozliczenie oddanej energii"
         },
         "data_description": {
           "dynamic": "Cena energii zależy od RDN (Fixing I TGE = RCE PSE) plus marża sprzedawcy. Dystrybucja nadal liczona jest wg grupy taryfowej.",
-          "sale_mode": "Net-billing: RCE = cena rynkowa 15-minutowa/godzinowa, RCEm = średnia miesięczna."
+          "sale_mode": "Net-billing: RCE = cena rynkowa 15-minutowa/godzinowa, RCEm = średnia miesięczna.",
+          "capacity_tier": "Opłata mocowa to ryczałt miesięczny zależny od rocznego poboru z sieci."
         }
       },
       "prices": {
@@ -87,6 +95,8 @@
           "dist_peak": "Zmienne opłaty dystrybucyjne (strefa dzienna / całodobowa)",
           "dist_offpeak": "Zmienne opłaty dystrybucyjne (strefa tańsza)",
           "offpeak_hours": "Godziny strefy tańszej",
+          "offpeak_hours_summer": "Godziny strefy tańszej latem (kwiecień-wrzesień)",
+          "excise": "Akcyza",
           "weekend_offpeak": "Weekendy w strefie tańszej",
           "holiday_offpeak": "Święta w strefie tańszej",
           "fixed_monthly": "Opłaty stałe miesięcznie",
@@ -98,6 +108,8 @@
           "dist_peak": "Suma za kWh: opłata sieciowa zmienna, jakościowa, OZE i kogeneracyjna.",
           "offpeak_hours": "Zakresy po przecinku, np. 13-15,22-6",
           "fixed_monthly": "Opłata handlowa, sieciowa stała, abonamentowa, mocowa i przejściowa, netto.",
+          "offpeak_hours_summer": "Tylko jeśli OSD zmienia strefy latem (np. PGE: 15-17,22-6). W przeciwnym razie zostaw puste.",
+          "excise": "Akcyza za kWh, doliczana do ceny energii przed VAT (0,005 zł/kWh).",
           "deposit_multiplier": "Współczynnik dla wartości energii oddanej, jeśli Twoje rozliczenie go stosuje."
         }
       }
@@ -128,17 +140,19 @@
         "other": "Inny / wpiszę ręcznie"
       }
     },
-    "tariff_group": {
-      "options": {
-        "G11": "G11",
-        "G12": "G12",
-        "G12w": "G12w"
-      }
-    },
     "phases": {
       "options": {
         "1": "Jednofazowe",
         "3": "Trójfazowe"
+      }
+    },
+    "capacity_tier": {
+      "options": {
+        "none": "Nie dotyczy / wpiszę sam",
+        "lt500": "Poniżej 500 kWh",
+        "500_1200": "500-1200 kWh",
+        "1200_2800": "1200-2800 kWh",
+        "gt2800": "Powyżej 2800 kWh"
       }
     },
     "sale_mode": {

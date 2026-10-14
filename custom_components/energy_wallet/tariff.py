@@ -20,6 +20,9 @@ TARIFF_DIR = Path(__file__).parent / "tariffs"
 PEAK = "peak"
 OFFPEAK = "offpeak"
 
+# Some DSOs (PGE Dystrybucja) move the afternoon off-peak window in summer.
+SUMMER_MONTHS = range(4, 10)
+
 
 def easter_sunday(year: int) -> date:
     """Gregorian Easter Sunday (anonymous algorithm)."""
@@ -125,9 +128,11 @@ class PriceConfig:
     dist_peak: float = 0.0
     dist_offpeak: float = 0.0
     offpeak_windows: list[tuple[int, int]] = field(default_factory=list)
+    offpeak_windows_summer: list[tuple[int, int]] | None = None
     weekend_offpeak: bool = False
     holiday_offpeak: bool = False
     fixed_monthly: float = 0.0
+    excise: float = 0.005
     vat: float = 0.23
 
     @property
@@ -142,8 +147,11 @@ class PriceConfig:
             return OFFPEAK
         if self.holiday_offpeak and day in polish_holidays(day.year):
             return OFFPEAK
+        windows = self.offpeak_windows
+        if self.offpeak_windows_summer and local_dt.month in SUMMER_MONTHS:
+            windows = self.offpeak_windows_summer
         minute = local_dt.hour * 60 + local_dt.minute
-        return OFFPEAK if _in_windows(minute, self.offpeak_windows) else PEAK
+        return OFFPEAK if _in_windows(minute, windows) else PEAK
 
     def energy_component(self, local_dt: datetime, rce: float | None) -> float | None:
         """Seller's part of the price, net PLN/kWh."""
@@ -160,11 +168,15 @@ class PriceConfig:
         return self.dist_offpeak if self.zone(local_dt) == OFFPEAK else self.dist_peak
 
     def buy_price(self, local_dt: datetime, rce: float | None = None) -> float | None:
-        """Gross PLN/kWh for energy taken from the grid at ``local_dt``."""
+        """Gross PLN/kWh for energy taken from the grid at ``local_dt``.
+
+        Tariff energy prices are published without excise, which the bill adds
+        per kWh before VAT.
+        """
         energy = self.energy_component(local_dt, rce)
         if energy is None:
             return None
-        return (energy + self.distribution_component(local_dt)) * (1 + self.vat)
+        return (energy + self.excise + self.distribution_component(local_dt)) * (1 + self.vat)
 
     @property
     def fixed_monthly_gross(self) -> float:
@@ -200,6 +212,7 @@ def catalog_defaults(
     group: str,
     dynamic: bool,
     phases: int,
+    capacity_tier: str | None = None,
 ) -> dict[str, Any]:
     """Default price settings for a seller/DSO/group combination.
 
@@ -208,6 +221,7 @@ def catalog_defaults(
     """
     seller_data = catalog.get("sellers", {}).get(seller, {})
     dso_group = catalog.get("dsos", {}).get(dso, {}).get("groups", {}).get(group, {})
+    common = catalog.get("common", {})
     sources: list[str] = []
     verified = True
 
@@ -228,7 +242,8 @@ def catalog_defaults(
         verified = False
 
     variable = dso_group.get("variable", {})
-    per_kwh = dso_group.get("per_kwh", {})
+    # Quality, OZE and cogeneration charges are set nationally; a DSO entry may override them.
+    per_kwh = {**common.get("per_kwh", {}), **dso_group.get("per_kwh", {})}
     extras = [per_kwh.get(k) for k in ("quality", "oze", "cogeneration")]
     dist_peak = _sum_known(variable.get("peak"), *extras)
     dist_offpeak = _sum_known(variable.get("offpeak", variable.get("peak") if group == "G11" else None), *extras)
@@ -243,6 +258,7 @@ def catalog_defaults(
         dso_group.get("fixed_monthly", {}).get(str(phases)),
         dso_group.get("subscription_monthly"),
         dso_group.get("transitional_monthly"),
+        common.get("capacity_monthly", {}).get(capacity_tier or "none", 0.0) if dso_group else None,
     ]
     # Fixed fees: a partial sum is still a useful starting point for the form.
     known_fixed = [v for v in fixed_parts if v is not None]
@@ -250,6 +266,8 @@ def catalog_defaults(
 
     windows = dso_group.get("offpeak", [])
     return {
+        "offpeak_hours_summer": ",".join(dso_group.get("offpeak_summer", [])),
+        "excise": common.get("excise_kwh"),
         "energy_peak": energy_peak,
         "energy_offpeak": energy_offpeak,
         "dynamic_markup": markup,

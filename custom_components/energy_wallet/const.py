@@ -19,6 +19,9 @@ CONF_DYNAMIC_MARKUP = "dynamic_markup"
 CONF_DIST_PEAK = "dist_peak"
 CONF_DIST_OFFPEAK = "dist_offpeak"
 CONF_OFFPEAK_HOURS = "offpeak_hours"
+CONF_OFFPEAK_HOURS_SUMMER = "offpeak_hours_summer"
+CONF_EXCISE = "excise"
+CONF_CAPACITY_TIER = "capacity_tier"
 CONF_WEEKEND_OFFPEAK = "weekend_offpeak"
 CONF_HOLIDAY_OFFPEAK = "holiday_offpeak"
 CONF_FIXED_MONTHLY = "fixed_monthly"
@@ -37,6 +40,9 @@ TWO_ZONE_GROUPS = {"G12", "G12w"}
 OTHER = "other"
 
 DEFAULT_VAT = 0.23
+DEFAULT_EXCISE = 0.005
+CAPACITY_TIERS = ["none", "lt500", "500_1200", "1200_2800", "gt2800"]
+DEFAULT_CAPACITY_TIER = "1200_2800"
 DEFAULT_DEPOSIT_MULTIPLIER = 1.0
 DEFAULT_MAX_POWER_KW = 50.0
 

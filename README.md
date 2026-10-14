@@ -11,7 +11,7 @@ Integracja i karta pokazujące, **za ile kupiłeś energię z sieci i za ile ją
 - Czyta dwa **narastające liczniki energii** (pobór z sieci i oddanie do sieci) z dowolnego falownika lub licznika, np. Deye `TotalEnergyBuy` / `TotalEnergySell`.
 - Pobiera **RCE z API PSE** (`api.raporty.pse.pl`, okresy 15-minutowe, ceny na jutro zwykle po ok. 14:00).
 - Przypisuje każdy przyrost energii do 15-minutowego okresu i wycenia go:
-  - **zakup** = (cena energii + zmienne opłaty dystrybucyjne) × (1 + VAT).
+  - **zakup** = (cena energii + akcyza + zmienne opłaty dystrybucyjne) × (1 + VAT).
     - Taryfa stała: cena zależy od strefy (G11 / G12 / G12w, z weekendami i świętami).
     - Taryfa dynamiczna: cena energii = RCE + marża sprzedawcy.
   - **sprzedaż** = RCE okresu (ujemne liczone jako 0, opcjonalnie), albo RCEm (średnia miesięczna).
@@ -41,20 +41,31 @@ show_chart: true
 2. **Sprzedawca i taryfa.** Wybierasz sprzedawcę, grupę taryfową (G11/G12/G12w), cenę dynamiczną, dystrybutora (OSD), liczbę faz i sposób rozliczenia sprzedaży (RCE albo RCEm).
 3. **Ceny.** Pola są wypełnione danymi z `tariffs/<rok>.json`, jeśli integracja je ma. Puste pola trzeba przepisać z umowy lub taryfy. Wszystkie ceny wpisujesz **netto**:
    - *zmienne opłaty dystrybucyjne* = opłata sieciowa zmienna + jakościowa + OZE + kogeneracyjna (zł/kWh),
-   - *opłaty stałe* = handlowa + sieciowa stała + abonamentowa + mocowa + przejściowa (zł/mies.). Są pokazywane osobno i nie wchodzą do bilansu.
+   - *opłaty stałe* = handlowa + sieciowa stała + abonamentowa + mocowa (według wybranego progu zużycia) + przejściowa (zł/mies.). Są pokazywane osobno i nie wchodzą do bilansu.
+   - PGE Dystrybucja przesuwa latem (kwiecień–wrzesień) popołudniową strefę tańszą na 15–17; służy do tego pole *godziny strefy tańszej latem*.
 
 Wszystko da się później zmienić w opcjach integracji. Zmiana taryfy czyści stare ceny, żeby nie zostały przypadkiem.
 
 ### Dane taryf: stan
 
-| Dane | Źródło | Stan |
-|---|---|---|
-| RCE / ceny dynamiczne | API PSE | automatycznie |
-| Ceny energii G11 2026 (Tauron, PGE, Enea, Energa) | artykuły prasowe o taryfach URE | ⚠️ niezweryfikowane z PDF |
-| Opłata sieciowa stała Tauron Dystrybucja i PGE Dystrybucja G11 | artykuły prasowe | ⚠️ niezweryfikowane |
-| Pozostałe stawki dystrybucyjne, G12/G12w, marże ofert dynamicznych | — | brak, trzeba wpisać ręcznie |
+Stan na 14.10.2026 (`tariffs/2026.json`, ceny netto):
 
-Taryfy sprzedawców i OSD są publikowane wyłącznie jako PDF-y, bez API. Każda wartość w `tariffs/2026.json` ma pole `sources` i flagę `verified`. **PR-y z danymi z oficjalnych taryf są bardzo mile widziane.** Gdy wbudowane dane są z poprzedniego roku, integracja zgłasza ostrzeżenie w *Naprawach*.
+| | G11 | G12 | G12w | Strefy | Opłaty stałe |
+|---|---|---|---|---|---|
+| **TAURON Dystrybucja** | ✅ | ✅ | ✅ | 13–15, 22–6 | ✅ |
+| **PGE Dystrybucja** | ✅ | ✅ | ✅ | zima 13–15, lato 15–17; 22–6 | ✅ |
+| **Enea Operator** | ✅ | ✅ | ✅ | G12: 13–15, 22–6 ⚠️; G12w: 21–6 | bez abonamentowej |
+| **Energa Operator** | ✅ | ✅ | ✅ | 13–15, 22–6 | częściowo |
+| **Stoen Operator** | ✅ | ✅ | — | 22–6 | częściowo |
+| **Sprzedawcy z urzędu** (Tauron, PGE, Enea, Energa) | ✅ | ✅ | ✅ | | opłata handlowa: Tauron/PGE 0 zł |
+| **Oferty dynamiczne** (marża, opłata) | Tauron, PGE, Enea, Energa | | | | ✅ |
+| **E.ON** | — (ceny spoza taryfy URE) | | | | |
+
+Wspólne dla wszystkich: opłata jakościowa 0,0332, OZE 0,0073, kogeneracyjna 0,0030 zł/kWh, akcyza 0,005 zł/kWh, opłata mocowa według progu rocznego zużycia (4,29 / 10,31 / 17,18 / 24,05 zł/mies.).
+
+Skąd te dane: z wyciągów taryf OSD, taryf sprzedawców zatwierdzonych przez URE (17.12.2025) i serwisów branżowych. Większość stawek sprawdzono krzyżowo: netto × 1,23 daje co do grosza brutto z drugiego źródła, a dla cen energii (netto + akcyza) × 1,23 daje brutto. **Nikt jednak nie porównał ich jeszcze ręcznie z PDF-em**, dlatego wszystkie mają `"verified": false`, a konfiguracja pokazuje ⚠️. Każdy wpis ma `sources` i `note`. Najsłabsze dane to marże ofert dynamicznych (tabele porównawcze z początku 2026) i godziny stref Enei. Puste pola (`null`) konfiguracja każe wpisać ręcznie.
+
+**PR-y z poprawkami i weryfikacją według oficjalnych taryf są bardzo mile widziane.** Gdy wbudowane dane są z poprzedniego roku, integracja zgłasza ostrzeżenie w *Naprawach*.
 
 ### RCEm
 

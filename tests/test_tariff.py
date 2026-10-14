@@ -69,11 +69,25 @@ def test_g12w_weekend_and_holiday():
 
 def test_buy_price_fixed_and_dynamic():
     noon = datetime(2026, 10, 14, 12, tzinfo=WAW)
-    assert g12().buy_price(noon) == pytest.approx((0.6 + 0.3) * 1.23)
+    assert g12().buy_price(noon) == pytest.approx((0.6 + 0.005 + 0.3) * 1.23)
     dyn = g12(dynamic=True, dynamic_markup=0.05)
-    assert dyn.buy_price(noon, rce=400) == pytest.approx((0.4 + 0.05 + 0.3) * 1.23)
-    assert dyn.buy_price(noon, rce=-100) == pytest.approx((-0.1 + 0.05 + 0.3) * 1.23)
+    assert dyn.buy_price(noon, rce=400) == pytest.approx((0.4 + 0.05 + 0.005 + 0.3) * 1.23)
+    assert dyn.buy_price(noon, rce=-100) == pytest.approx((-0.1 + 0.05 + 0.005 + 0.3) * 1.23)
     assert dyn.buy_price(noon, rce=None) is None
+
+
+def test_pge_summer_window():
+    cfg = g12(offpeak_windows_summer=parse_windows("15-17,22-6"))
+    assert cfg.zone(datetime(2026, 7, 14, 14, tzinfo=WAW)) == PEAK
+    assert cfg.zone(datetime(2026, 7, 14, 16, tzinfo=WAW)) == OFFPEAK
+    assert cfg.zone(datetime(2026, 10, 14, 14, tzinfo=WAW)) == OFFPEAK
+    assert cfg.zone(datetime(2026, 10, 14, 16, tzinfo=WAW)) == PEAK
+
+
+def test_published_gross_matches_model():
+    """Tauron G12 day: energy 0.5430 + excise, published gross 0.6740."""
+    cfg = PriceConfig(tariff_group="G11", energy_peak=0.5430, vat=0.23)
+    assert cfg.buy_price(datetime(2026, 10, 14, 12, tzinfo=WAW)) == pytest.approx(0.6740, abs=1e-4)
 
 
 def test_g11_ignores_windows():
@@ -90,11 +104,13 @@ def test_sell_price():
 
 
 def test_catalog_defaults_tauron_g11():
-    d = catalog_defaults(load_catalog(2026), "tauron", "tauron_dystrybucja", "G11", False, 3)
+    d = catalog_defaults(load_catalog(2026), "tauron", "tauron_dystrybucja", "G11", False, 3, "1200_2800")
     assert d["energy_peak"] == pytest.approx(0.497)
     assert d["energy_offpeak"] == pytest.approx(0.497)
-    assert d["dist_peak"] is None  # unknown values are not silently zero
-    assert d["fixed_monthly"] == pytest.approx(10.86)
+    assert d["dist_peak"] == pytest.approx(0.2464 + 0.0332 + 0.0073 + 0.0030)
+    # trade 0 + network 10.86 + subscription 4.56 + transitional 0 + capacity 17.18
+    assert d["fixed_monthly"] == pytest.approx(32.60)
+    assert d["excise"] == pytest.approx(0.005)
     assert d["verified"] is False
     assert d["sources"]
 
@@ -102,9 +118,27 @@ def test_catalog_defaults_tauron_g11():
 def test_catalog_defaults_dynamic_and_g12w_zones():
     d = catalog_defaults(load_catalog(2026), "tauron", "tauron_dystrybucja", "G12w", True, 1)
     assert d["energy_peak"] is None
-    assert d["dynamic_markup"] is None
+    assert d["dynamic_markup"] == pytest.approx(0.110)
     assert d["offpeak_hours"] == "13-15,22-6"
+    assert d["offpeak_hours_summer"] == ""
     assert d["weekend_offpeak"] is True
+
+
+def test_catalog_pge_summer_and_unknowns_stay_none():
+    d = catalog_defaults(load_catalog(2026), "pge", "pge_dystrybucja", "G12", False, 3)
+    assert d["offpeak_hours_summer"] == "15-17,22-6"
+    assert d["energy_offpeak"] == pytest.approx(0.3718)
+    stoen = catalog_defaults(load_catalog(2026), "eon", "stoen_operator", "G12w", False, 3)
+    assert stoen["dist_peak"] is None
+    assert stoen["energy_peak"] is None
+
+
+def test_catalog_net_gross_consistency():
+    """Every DSO variable rate in the catalog is a plain net number in a sane range."""
+    for dso in load_catalog(2026)["dsos"].values():
+        for group in dso["groups"].values():
+            for value in group["variable"].values():
+                assert value is None or 0 < value < 1
 
 
 def test_catalog_falls_back_to_oldest_for_past_years():

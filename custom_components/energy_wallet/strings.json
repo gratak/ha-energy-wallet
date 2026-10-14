@@ -18,11 +18,13 @@
           "dynamic": "Dynamic (exchange-indexed) price",
           "dso": "Distribution system operator",
           "phases": "Connection phases",
+          "capacity_tier": "Yearly consumption (capacity fee)",
           "sale_mode": "Export settlement"
         },
         "data_description": {
           "dynamic": "Energy price follows the day-ahead market (TGE Fixing I = PSE RCE) plus the seller's markup. Distribution is still charged by the tariff group.",
-          "sale_mode": "Net-billing: RCE = 15-minute/hourly market price, RCEm = monthly average."
+          "sale_mode": "Net-billing: RCE = 15-minute/hourly market price, RCEm = monthly average.",
+          "capacity_tier": "The capacity fee (opłata mocowa) is a flat monthly charge chosen by yearly grid consumption."
         }
       },
       "prices": {
@@ -35,6 +37,8 @@
           "dist_peak": "Variable distribution charges (day / single zone)",
           "dist_offpeak": "Variable distribution charges (off-peak zone)",
           "offpeak_hours": "Off-peak hours",
+          "offpeak_hours_summer": "Off-peak hours in summer (April-September)",
+          "excise": "Excise duty",
           "weekend_offpeak": "Weekends are off-peak",
           "holiday_offpeak": "Public holidays are off-peak",
           "fixed_monthly": "Fixed monthly fees",
@@ -46,6 +50,8 @@
           "dist_peak": "Sum of the variable network charge, quality charge, OZE and cogeneration charges per kWh.",
           "offpeak_hours": "Comma separated ranges, e.g. 13-15,22-6",
           "fixed_monthly": "Trade fee, fixed network charge, subscription, capacity and transitional charges, net.",
+          "offpeak_hours_summer": "Only if your DSO moves the zones in summer (e.g. PGE: 15-17,22-6). Leave empty otherwise.",
+          "excise": "Akcyza per kWh, added to the energy price before VAT (0.005 PLN/kWh).",
           "deposit_multiplier": "Factor applied to the value of exported energy, if your settlement uses one."
         }
       }
@@ -70,11 +76,13 @@
           "dynamic": "Dynamic (exchange-indexed) price",
           "dso": "Distribution system operator",
           "phases": "Connection phases",
+          "capacity_tier": "Yearly consumption (capacity fee)",
           "sale_mode": "Export settlement"
         },
         "data_description": {
           "dynamic": "Energy price follows the day-ahead market (TGE Fixing I = PSE RCE) plus the seller's markup. Distribution is still charged by the tariff group.",
-          "sale_mode": "Net-billing: RCE = 15-minute/hourly market price, RCEm = monthly average."
+          "sale_mode": "Net-billing: RCE = 15-minute/hourly market price, RCEm = monthly average.",
+          "capacity_tier": "The capacity fee (opłata mocowa) is a flat monthly charge chosen by yearly grid consumption."
         }
       },
       "prices": {
@@ -87,6 +95,8 @@
           "dist_peak": "Variable distribution charges (day / single zone)",
           "dist_offpeak": "Variable distribution charges (off-peak zone)",
           "offpeak_hours": "Off-peak hours",
+          "offpeak_hours_summer": "Off-peak hours in summer (April-September)",
+          "excise": "Excise duty",
           "weekend_offpeak": "Weekends are off-peak",
           "holiday_offpeak": "Public holidays are off-peak",
           "fixed_monthly": "Fixed monthly fees",
@@ -98,6 +108,8 @@
           "dist_peak": "Sum of the variable network charge, quality charge, OZE and cogeneration charges per kWh.",
           "offpeak_hours": "Comma separated ranges, e.g. 13-15,22-6",
           "fixed_monthly": "Trade fee, fixed network charge, subscription, capacity and transitional charges, net.",
+          "offpeak_hours_summer": "Only if your DSO moves the zones in summer (e.g. PGE: 15-17,22-6). Leave empty otherwise.",
+          "excise": "Akcyza per kWh, added to the energy price before VAT (0.005 PLN/kWh).",
           "deposit_multiplier": "Factor applied to the value of exported energy, if your settlement uses one."
         }
       }
@@ -128,17 +140,19 @@
         "other": "Other / enter manually"
       }
     },
-    "tariff_group": {
-      "options": {
-        "G11": "G11",
-        "G12": "G12",
-        "G12w": "G12w"
-      }
-    },
     "phases": {
       "options": {
         "1": "Single-phase",
         "3": "Three-phase"
+      }
+    },
+    "capacity_tier": {
+      "options": {
+        "none": "Not charged / enter myself",
+        "lt500": "Below 500 kWh",
+        "500_1200": "500-1200 kWh",
+        "1200_2800": "1200-2800 kWh",
+        "gt2800": "Above 2800 kWh"
       }
     },
     "sale_mode": {

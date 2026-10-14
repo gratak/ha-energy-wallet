@@ -12,6 +12,8 @@ from homeassistant.helpers import selector
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CAPACITY_TIERS,
+    CONF_CAPACITY_TIER,
     CONF_CLAMP_NEGATIVE,
     CONF_DEPOSIT_MULTIPLIER,
     CONF_DIST_OFFPEAK,
@@ -21,18 +23,22 @@ from .const import (
     CONF_DYNAMIC_MARKUP,
     CONF_ENERGY_OFFPEAK,
     CONF_ENERGY_PEAK,
+    CONF_EXCISE,
     CONF_EXPORT_ENTITY,
     CONF_FIXED_MONTHLY,
     CONF_HOLIDAY_OFFPEAK,
     CONF_IMPORT_ENTITY,
     CONF_OFFPEAK_HOURS,
+    CONF_OFFPEAK_HOURS_SUMMER,
     CONF_PHASES,
     CONF_SALE_MODE,
     CONF_SELLER,
     CONF_TARIFF_GROUP,
     CONF_VAT,
     CONF_WEEKEND_OFFPEAK,
+    DEFAULT_CAPACITY_TIER,
     DEFAULT_DEPOSIT_MULTIPLIER,
+    DEFAULT_EXCISE,
     DEFAULT_VAT,
     DOMAIN,
     OTHER,
@@ -44,7 +50,7 @@ from .const import (
 from .detect import grid_entities_from_energy_prefs, rank_candidates
 from .tariff import catalog_defaults, load_catalog, parse_windows
 
-TARIFF_KEYS = (CONF_SELLER, CONF_TARIFF_GROUP, CONF_DYNAMIC, CONF_DSO, CONF_PHASES)
+TARIFF_KEYS = (CONF_SELLER, CONF_TARIFF_GROUP, CONF_DYNAMIC, CONF_DSO, CONF_PHASES, CONF_CAPACITY_TIER)
 
 ENERGY_SENSOR = selector.EntitySelector(
     selector.EntitySelectorConfig(domain="sensor", device_class="energy")
@@ -77,10 +83,11 @@ async def detect_grid_entities(hass: HomeAssistant) -> tuple[str | None, str | N
     return imp, exp
 
 
-def _select(options: list[str], key: str) -> selector.SelectSelector:
-    return selector.SelectSelector(
-        selector.SelectSelectorConfig(options=options, translation_key=key, mode="dropdown")
-    )
+def _select(options: list[str], key: str | None) -> selector.SelectSelector:
+    config: dict[str, Any] = {"options": options, "mode": "dropdown"}
+    if key:
+        config["translation_key"] = key
+    return selector.SelectSelector(selector.SelectSelectorConfig(**config))
 
 
 def entities_schema(defaults: dict[str, Any]) -> vol.Schema:
@@ -99,12 +106,13 @@ def tariff_schema(defaults: dict[str, Any]) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(CONF_SELLER, default=defaults.get(CONF_SELLER, sellers[0])): _select(sellers, "seller"),
-            vol.Required(CONF_TARIFF_GROUP, default=defaults.get(CONF_TARIFF_GROUP, "G11")): _select(
-                TARIFF_GROUPS, "tariff_group"
-            ),
+            vol.Required(CONF_TARIFF_GROUP, default=defaults.get(CONF_TARIFF_GROUP, "G11")): _select(TARIFF_GROUPS, None),
             vol.Required(CONF_DYNAMIC, default=defaults.get(CONF_DYNAMIC, False)): selector.BooleanSelector(),
             vol.Required(CONF_DSO, default=defaults.get(CONF_DSO, dsos[0])): _select(dsos, "dso"),
             vol.Required(CONF_PHASES, default=str(defaults.get(CONF_PHASES, "3"))): _select(["1", "3"], "phases"),
+            vol.Required(CONF_CAPACITY_TIER, default=defaults.get(CONF_CAPACITY_TIER, DEFAULT_CAPACITY_TIER)): _select(
+                CAPACITY_TIERS, "capacity_tier"
+            ),
             vol.Required(CONF_SALE_MODE, default=defaults.get(CONF_SALE_MODE, SALE_MODE_RCE)): _select(
                 SALE_MODES, "sale_mode"
             ),
@@ -132,6 +140,9 @@ def prices_schema(conf: dict[str, Any], defaults: dict[str, Any]) -> vol.Schema:
         fields[vol.Required(CONF_OFFPEAK_HOURS, **_default(defaults.get(CONF_OFFPEAK_HOURS)))] = (
             selector.TextSelector()
         )
+        fields[vol.Optional(CONF_OFFPEAK_HOURS_SUMMER, **_default(defaults.get(CONF_OFFPEAK_HOURS_SUMMER)))] = (
+            selector.TextSelector()
+        )
         fields[vol.Required(CONF_WEEKEND_OFFPEAK, default=defaults.get(CONF_WEEKEND_OFFPEAK, False))] = (
             selector.BooleanSelector()
         )
@@ -139,6 +150,7 @@ def prices_schema(conf: dict[str, Any], defaults: dict[str, Any]) -> vol.Schema:
             selector.BooleanSelector()
         )
     fields[vol.Required(CONF_FIXED_MONTHLY, **_default(defaults.get(CONF_FIXED_MONTHLY)))] = MONTHLY
+    fields[vol.Required(CONF_EXCISE, default=defaults.get(CONF_EXCISE) or DEFAULT_EXCISE)] = PRICE
     fields[vol.Required(CONF_VAT, default=defaults.get(CONF_VAT, DEFAULT_VAT))] = RATIO
     fields[vol.Required(CONF_DEPOSIT_MULTIPLIER, default=defaults.get(CONF_DEPOSIT_MULTIPLIER, DEFAULT_DEPOSIT_MULTIPLIER))] = RATIO
     fields[vol.Required(CONF_CLAMP_NEGATIVE, default=defaults.get(CONF_CLAMP_NEGATIVE, True))] = (
@@ -158,6 +170,7 @@ def defaults_from_catalog(conf: dict[str, Any]) -> tuple[dict[str, Any], dict[st
         conf.get(CONF_TARIFF_GROUP, "G11"),
         bool(conf.get(CONF_DYNAMIC)),
         int(conf.get(CONF_PHASES, 3)),
+        conf.get(CONF_CAPACITY_TIER, DEFAULT_CAPACITY_TIER),
     )
     placeholders = {
         "verified": "✅" if defaults.pop("verified") else "⚠️",
@@ -167,11 +180,11 @@ def defaults_from_catalog(conf: dict[str, Any]) -> tuple[dict[str, Any], dict[st
 
 
 def validate_prices(user_input: dict[str, Any]) -> dict[str, str]:
-    if CONF_OFFPEAK_HOURS in user_input:
+    for key in (CONF_OFFPEAK_HOURS, CONF_OFFPEAK_HOURS_SUMMER):
         try:
-            parse_windows(user_input[CONF_OFFPEAK_HOURS])
+            parse_windows(user_input.get(key))
         except ValueError:
-            return {CONF_OFFPEAK_HOURS: "invalid_hours"}
+            return {key: "invalid_hours"}
     return {}
 
 
@@ -240,7 +253,7 @@ class EnergyWalletOptionsFlow(OptionsFlow):
             if tariff_changed:
                 # Prices from the previous tariff would be misleading.
                 for key in (CONF_ENERGY_PEAK, CONF_ENERGY_OFFPEAK, CONF_DYNAMIC_MARKUP, CONF_DIST_PEAK,
-                            CONF_DIST_OFFPEAK, CONF_OFFPEAK_HOURS, CONF_FIXED_MONTHLY):
+                            CONF_DIST_OFFPEAK, CONF_OFFPEAK_HOURS, CONF_OFFPEAK_HOURS_SUMMER, CONF_FIXED_MONTHLY):
                     self._conf.pop(key, None)
             return await self.async_step_prices()
         schema = vol.Schema({**entities_schema(current).schema, **tariff_schema(current).schema})
@@ -253,7 +266,10 @@ class EnergyWalletOptionsFlow(OptionsFlow):
         if user_input is not None:
             errors = validate_prices(user_input)
             if not errors:
-                return self.async_create_entry(data={**self._conf, **user_input})
+                data = {**self._conf, **user_input}
+                if CONF_OFFPEAK_HOURS_SUMMER not in user_input:
+                    data.pop(CONF_OFFPEAK_HOURS_SUMMER, None)
+                return self.async_create_entry(data=data)
             defaults.update(user_input)
         return self.async_show_form(
             step_id="prices",

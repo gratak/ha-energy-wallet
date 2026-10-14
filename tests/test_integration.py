@@ -72,7 +72,7 @@ async def test_config_flow_detects_and_creates(hass: HomeAssistant, setup_states
     assert result["step_id"] == "tariff"
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {"seller": "tauron", "tariff_group": "G12w", "dynamic": False, "dso": "tauron_dystrybucja", "phases": "3", "sale_mode": "rce"},
+        {"seller": "tauron", "tariff_group": "G12w", "dynamic": False, "dso": "tauron_dystrybucja", "phases": "3", "capacity_tier": "gt2800", "sale_mode": "rce"},
     )
     assert result["step_id"] == "prices"
     keys = {str(k) for k in result["data_schema"].schema}
@@ -116,14 +116,14 @@ async def test_wallet_counts_money(hass: HomeAssistant, setup_states, aioclient_
     cost = value(hass, entry, "purchase_cost_today")
     revenue = value(hass, entry, "sale_revenue_today")
     balance = value(hass, entry, "balance_today")
-    assert float(cost.state) == pytest.approx((0.5 + 0.3) * 1.23)
+    assert float(cost.state) == pytest.approx((0.5 + 0.005 + 0.3) * 1.23, abs=1e-4)
     assert cost.attributes["energy_kwh"] == pytest.approx(1.0)
     assert float(revenue.state) == pytest.approx(2 * 0.4)
-    assert float(balance.state) == pytest.approx(0.8 - 0.984)
+    assert float(balance.state) == pytest.approx(0.8 - 0.99015, abs=1e-4)
     assert balance.attributes["fixed_monthly_gross"] == pytest.approx(24.6)
     assert cost.attributes["energy_wallet"]["role"] == "purchase_cost"
     assert float(value(hass, entry, "sell_price").state) == pytest.approx(0.4)
-    assert float(value(hass, entry, "buy_price").state) == pytest.approx(0.984)
+    assert float(value(hass, entry, "buy_price").state) == pytest.approx(0.99015, abs=1e-4)
 
     # A glitch to zero and back must not double count.
     hass.states.async_set(IMP, "0", ATTRS)
@@ -178,13 +178,13 @@ async def test_options_flow_resets_prices_on_tariff_change(hass: HomeAssistant, 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"import_entity": IMP, "export_entity": EXP, "seller": "tauron", "tariff_group": "G11", "dynamic": True,
-         "dso": "tauron_dystrybucja", "phases": "3", "sale_mode": "rcem"},
+         "dso": "tauron_dystrybucja", "phases": "3", "capacity_tier": "none", "sale_mode": "rcem"},
     )
     assert result["step_id"] == "prices"
     keys = {str(k): k for k in result["data_schema"].schema}
     assert "dynamic_markup" in keys and "energy_peak" not in keys
-    # The old distribution price must not be carried over silently once the tariff changed.
-    assert not callable(getattr(keys["dist_peak"], "default", None)) or keys["dist_peak"].default() is None
+    # After a tariff change the catalog value replaces the old 0.3 typed for the previous tariff.
+    assert keys["dist_peak"].default() == pytest.approx(0.2464 + 0.0332 + 0.0073 + 0.0030)
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
