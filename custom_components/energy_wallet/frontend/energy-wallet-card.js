@@ -1,6 +1,6 @@
 /* Energy Wallet card: purchase cost vs. sale revenue for grid energy. */
 
-const VERSION = "0.1.1";
+const VERSION = "0.1.2";
 
 const I18N = {
   en: {
@@ -235,15 +235,20 @@ class EnergyWalletCard extends HTMLElement {
 }
 
 const STYLE = `
-  :host { --ew-buy: var(--error-color, #db4437); --ew-sell: var(--success-color, #43a047); }
+  :host {
+    --ew-buy: var(--error-color, #db4437);
+    --ew-sell: var(--success-color, #43a047);
+    /* A light tint of the text colour reads well on both light and dark cards. */
+    --ew-surface: color-mix(in srgb, var(--primary-text-color, #212121) 6%, transparent);
+  }
   .header { padding: 16px 16px 0; font-size: 1.15em; font-weight: 500; color: var(--primary-text-color); }
   .content { padding: 12px 16px 16px; display: grid; gap: 12px; color: var(--primary-text-color); }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
-  .tabs { display: flex; gap: 4px; background: var(--secondary-background-color); border-radius: 10px; padding: 3px; }
+  .tabs { display: flex; gap: 4px; background: var(--ew-surface); border-radius: 10px; padding: 3px; }
   .tab { flex: 1; text-align: center; padding: 6px 0; border-radius: 8px; color: var(--secondary-text-color); font-size: 0.9em; }
   .tab.active { background: var(--card-background-color, #fff); color: var(--primary-text-color); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
   .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  .tile { display: grid; align-content: start; gap: 2px; padding: 10px; border-radius: 12px; background: var(--secondary-background-color); min-width: 0; }
+  .tile { display: grid; align-content: start; gap: 2px; padding: 10px; border-radius: 12px; background: var(--ew-surface); min-width: 0; }
   .tile .label { font-size: 0.8em; color: var(--secondary-text-color); }
   .tile .value { font-size: 1.2em; font-weight: 600; color: var(--primary-text-color); white-space: nowrap; }
   .tile .sub, .tile .note { font-size: 0.75em; color: var(--secondary-text-color); }

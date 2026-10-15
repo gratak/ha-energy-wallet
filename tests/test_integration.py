@@ -211,4 +211,4 @@ async def test_card_registered_when_frontend_loads_later(hass: HomeAssistant, se
 
     hass.bus.async_fire(EVENT_COMPONENT_LOADED, {"component": "frontend"})
     await hass.async_block_till_done()
-    assert hass.data[DATA_EXTRA_MODULE_URL].urls == {"/energy_wallet/energy-wallet-card.js?v=0.1.1"}
+    assert hass.data[DATA_EXTRA_MODULE_URL].urls == {"/energy_wallet/energy-wallet-card.js?v=0.1.2"}
