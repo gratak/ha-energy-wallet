@@ -195,3 +195,20 @@ async def test_options_flow_resets_prices_on_tariff_change(hass: HomeAssistant, 
     await hass.async_block_till_done()
     assert entry.options["dynamic"] is True
     assert entry.runtime_data.prices.dynamic_markup == pytest.approx(0.06)
+
+
+async def test_card_registered_when_frontend_loads_later(hass: HomeAssistant, setup_states, aioclient_mock) -> None:
+    from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL, UrlManager
+    from homeassistant.const import EVENT_COMPONENT_LOADED
+
+    aioclient_mock.get(PSE_RCE_URL, json={"value": []})
+    hass.data[DATA_EXTRA_MODULE_URL] = UrlManager(lambda *_: None, [])
+    entry = MockConfigEntry(domain=DOMAIN, data=BASE, title="Energy Wallet")
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert not hass.data[DATA_EXTRA_MODULE_URL].urls
+
+    hass.bus.async_fire(EVENT_COMPONENT_LOADED, {"component": "frontend"})
+    await hass.async_block_till_done()
+    assert hass.data[DATA_EXTRA_MODULE_URL].urls == {"/energy_wallet/energy-wallet-card.js?v=0.1.1"}

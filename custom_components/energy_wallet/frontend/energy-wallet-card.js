@@ -1,6 +1,6 @@
 /* Energy Wallet card: purchase cost vs. sale revenue for grid energy. */
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 
 const I18N = {
   en: {
