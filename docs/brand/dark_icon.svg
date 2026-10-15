@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#66bb6a"/>
+      <stop offset="1" stop-color="#388e3c"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd54f"/>
+      <stop offset="1" stop-color="#ff8f00"/>
+    </linearGradient>
+  </defs>
+  <!-- banknote sticking out of the wallet -->
+  <rect x="44" y="30" width="150" height="70" rx="12" fill="#c8e6c9" transform="rotate(-8 119 65)"/>
+  <!-- wallet body -->
+  <rect x="16" y="62" width="214" height="170" rx="32" fill="url(#body)"/>
+  <!-- clasp -->
+  <rect x="160" y="116" width="84" height="62" rx="20" fill="#2e7d32"/>
+  <circle cx="192" cy="147" r="11" fill="#c8e6c9"/>
+  <!-- lightning bolt -->
+  <path d="M118 78 L62 156 L101 156 L86 214 L148 128 L108 128 L126 78 Z"
+        fill="url(#bolt)" stroke="#e65100" stroke-width="5" stroke-linejoin="round"/>
+</svg>

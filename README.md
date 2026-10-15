@@ -1,3 +1,5 @@
+<img src="custom_components/energy_wallet/brand/icon.png" alt="" width="96" align="right">
+
 # Energy Wallet for Home Assistant
 
 Integracja i karta pokazujące, **za ile kupiłeś energię z sieci i za ile ją sprzedałeś**. Każda kWh jest wyceniana po cenie z chwili, w której przepłynęła przez licznik: cena dynamiczna albo strefa taryfy G11/G12/G12w przy zakupie, RCE z PSE przy sprzedaży (net-billing).
