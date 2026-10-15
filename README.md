@@ -4,12 +4,10 @@
 
 Integracja i karta pokazujące, **za ile kupiłeś energię z sieci i za ile ją sprzedałeś**. Każda kWh jest wyceniana po cenie z chwili, w której przepłynęła przez licznik: cena dynamiczna albo strefa taryfy G11/G12/G12w przy zakupie, RCE z PSE przy sprzedaży (net-billing).
 
-<table>
-  <tr>
-    <td><img src="docs/card-light.png" alt="Karta w jasnym motywie, widok dzienny"></td>
-    <td><img src="docs/card-dark.png" alt="Karta w ciemnym motywie, widok miesięczny"></td>
-  </tr>
-</table>
+<p>
+  <img src="docs/card-light.png" alt="Karta w jasnym motywie, widok dzienny" width="49%">
+  <img src="docs/card-dark.png" alt="Karta w ciemnym motywie, widok miesięczny" width="49%">
+</p>
 
 *English summary at the bottom.*
 
