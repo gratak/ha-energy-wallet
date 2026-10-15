@@ -105,6 +105,53 @@ data:
 - **Brak ceny.** Energia czeka na cenę (np. gdy PSE nie odpowiada) do 3 dni. Potem jest liczona jako `unpriced_kwh`.
 - Rozliczenie godzinowe kontra 15-minutowe: integracja wycenia po okresach publikowanych przez PSE. Jeśli Twój sprzedawca rozlicza się inaczej, mogą być drobne różnice.
 
+## Plan rozwoju
+
+Główny cel: **stawki aktualizują się same**, bez czekania na nową wersję integracji i bez polegania na tym, że ktoś je ręcznie przepisze.
+
+### 1. Katalog stawek z historią i pobieraniem z repo
+
+- [ ] Każda stawka w katalogu ma okres obowiązywania (`valid_from` / `valid_to`), a katalog trzyma historię zamiast samych bieżących wartości. Nowa taryfa przełącza się dokładnie o północy w dniu wejścia w życie, choć URE zatwierdza ją już w grudniu.
+- [ ] Integracja raz dziennie pobiera aktualny katalog z repozytorium. Wbudowany plik zostaje jako zapas na wypadek braku internetu. Katalog ma numer rewizji, a wybierana jest nowsza z dwóch wersji.
+- [ ] Wartości wpisane ręcznie przez użytkownika zawsze wygrywają z katalogiem. Integracja zapamiętuje, które pola zostały nadpisane, a automatyczną aktualizację da się wyłączyć jednym przełącznikiem.
+- [ ] Powiadomienie w HA o każdej zmianie stawki, np. „Opłaty dystrybucyjne (dzień): 0,2899 → 0,2950 zł/kWh”.
+- [ ] Zmiana stawki działa od momentu jej wejścia w życie. Kwoty już policzone się nie zmieniają.
+
+### 2. Automat aktualizujący katalog (GitHub Actions)
+
+Zaplanowane zadanie w repozytorium robi to, co dziś trzeba robić ręcznie. Jedno centralne miejsce jest stabilniejsze niż parsowanie PDF-ów w każdej instalacji HA.
+
+- [ ] **Strażnik (codziennie).** Sprawdza znane adresy stron taryf OSD i sprzedawców (ETag, Last-Modified, hash pliku, nowe linki do PDF-ów). Gdy nic się nie zmieniło, kończy pracę.
+- [ ] **Ekstrakcja (tylko po zmianie).** Pobiera dokument i wyciąga tabele stawek oraz datę „obowiązuje od”:
+  - najpierw deterministyczny parser dopasowany do danego dokumentu,
+  - gdy parser zawiedzie (operator zmienił układ PDF-a), model językowy wypełnia ściśle określony schemat JSON. Wymaga klucza API zapisanego jako sekret repozytorium.
+- [ ] **Automatyczna weryfikacja,** zastępująca sprawdzanie przez ludzi:
+  - dwa niezależne dokumenty tego samego OSD: wyciąg netto × 1,23 musi dać co do grosza stawki z informacji o cenach brutto,
+  - ceny energii: (netto + akcyza) × 1,23 musi dać cenę brutto z cennika,
+  - kontrole zdrowego rozsądku: dopuszczalne zakresy (np. stawka zmienna 0,02–0,8 zł/kWh), zmiana rok do roku nie większa niż ±40%, komplet stref, godziny pokrywające całą dobę,
+  - data wejścia w życie zgodna z decyzją URE.
+- [ ] **Publikacja.** Gdy wszystkie kontrole przechodzą, automat sam zatwierdza nowy katalog z podbitą rewizją. Gdy któraś nie przechodzi, stary katalog zostaje, a automat zakłada zgłoszenie (issue) z opisem rozbieżności. To jedyny przypadek wymagający człowieka.
+- [ ] Zakres na start: 5 OSD (TAURON Dystrybucja, PGE Dystrybucja, Enea Operator, Energa Operator, Stoen Operator) i 4 sprzedawców z urzędu (TAURON, PGE, Enea, Energa). Te źródła da się zweryfikować krzyżowo i pokrywają większość użytkowników.
+
+### 3. Śledzenie decyzji URE
+
+- [ ] Monitorowanie listy decyzji taryfowych URE (BIP / Biuletyn Branżowy) jako dodatkowego sygnału, że trzeba sprawdzić dokumenty operatora. Wyłapuje to także korekty w trakcie roku, np. zmianę opłaty jakościowej od 1 lutego.
+- [ ] Opłaty ogólnokrajowe (jakościowa, OZE, kogeneracyjna, mocowa, akcyza) pobierane z komunikatów URE i PSE.
+
+### 4. Oferty dynamiczne i rynkowe
+
+- [ ] Śledzenie cenników ofert dynamicznych (marża, opłata miesięczna). Są mniej pewne niż taryfy URE: zmieniają się bez decyzji regulatora, mają nieregularny układ i nie istnieje drugi dokument do porównania.
+- [ ] Dla sprzedawców z publicznym API (np. Pstryk) cena zakupu pobierana bezpośrednio od nich zamiast wyliczania jej z RCE.
+
+### 5. Import faktury
+
+- [ ] Użytkownik wgrywa PDF faktury (albo przekazuje e-fakturę mailem), a integracja odczytuje stawki faktycznie mu naliczone i ustawia je jako jego wartości. To najdokładniejsze źródło dla umów niestandardowych: promocji, gwarancji ceny, innych okresów rozliczeniowych.
+
+### Inne
+
+- [ ] Przeliczanie wstecz dni sprzed instalacji na podstawie historii liczników z recordera HA. Wymaga stawek z historią dat (punkt 1).
+- [ ] Ikona w HACS przez repozytorium `home-assistant/brands`, jeśli HACS nie odczyta folderu `brand/`.
+
 ## Rozwój
 
 ```bash
