@@ -18,11 +18,13 @@ from .const import (
     CONF_DEPOSIT_MULTIPLIER,
     CONF_DIST_OFFPEAK,
     CONF_DIST_PEAK,
+    CONF_DIST_PEAK2,
     CONF_DSO,
     CONF_DYNAMIC,
     CONF_DYNAMIC_MARKUP,
     CONF_ENERGY_OFFPEAK,
     CONF_ENERGY_PEAK,
+    CONF_ENERGY_PEAK2,
     CONF_EXCISE,
     CONF_EXPORT_ENTITY,
     CONF_FIXED_MONTHLY,
@@ -30,6 +32,8 @@ from .const import (
     CONF_IMPORT_ENTITY,
     CONF_OFFPEAK_HOURS,
     CONF_OFFPEAK_HOURS_SUMMER,
+    CONF_PEAK2_HOURS,
+    CONF_PEAK2_HOURS_SUMMER,
     CONF_PHASES,
     CONF_SALE_MODE,
     CONF_SELLER,
@@ -45,6 +49,7 @@ from .const import (
     SALE_MODE_RCE,
     SALE_MODES,
     TARIFF_GROUPS,
+    THREE_ZONE_GROUPS,
     TWO_ZONE_GROUPS,
 )
 from .detect import grid_entities_from_energy_prefs, rank_candidates
@@ -127,14 +132,19 @@ def _default(value: Any) -> dict[str, Any]:
 
 def prices_schema(conf: dict[str, Any], defaults: dict[str, Any]) -> vol.Schema:
     two_zone = conf.get(CONF_TARIFF_GROUP) in TWO_ZONE_GROUPS
+    three_zone = conf.get(CONF_TARIFF_GROUP) in THREE_ZONE_GROUPS
     fields: dict[Any, Any] = {}
     if conf.get(CONF_DYNAMIC):
         fields[vol.Required(CONF_DYNAMIC_MARKUP, **_default(defaults.get(CONF_DYNAMIC_MARKUP)))] = PRICE
     else:
         fields[vol.Required(CONF_ENERGY_PEAK, **_default(defaults.get(CONF_ENERGY_PEAK)))] = PRICE
+        if three_zone:
+            fields[vol.Required(CONF_ENERGY_PEAK2, **_default(defaults.get(CONF_ENERGY_PEAK2)))] = PRICE
         if two_zone:
             fields[vol.Required(CONF_ENERGY_OFFPEAK, **_default(defaults.get(CONF_ENERGY_OFFPEAK)))] = PRICE
     fields[vol.Required(CONF_DIST_PEAK, **_default(defaults.get(CONF_DIST_PEAK)))] = PRICE
+    if three_zone:
+        fields[vol.Required(CONF_DIST_PEAK2, **_default(defaults.get(CONF_DIST_PEAK2)))] = PRICE
     if two_zone:
         fields[vol.Required(CONF_DIST_OFFPEAK, **_default(defaults.get(CONF_DIST_OFFPEAK)))] = PRICE
         fields[vol.Required(CONF_OFFPEAK_HOURS, **_default(defaults.get(CONF_OFFPEAK_HOURS)))] = (
@@ -143,6 +153,11 @@ def prices_schema(conf: dict[str, Any], defaults: dict[str, Any]) -> vol.Schema:
         fields[vol.Optional(CONF_OFFPEAK_HOURS_SUMMER, **_default(defaults.get(CONF_OFFPEAK_HOURS_SUMMER)))] = (
             selector.TextSelector()
         )
+        if three_zone:
+            fields[vol.Required(CONF_PEAK2_HOURS, **_default(defaults.get(CONF_PEAK2_HOURS)))] = selector.TextSelector()
+            fields[vol.Optional(CONF_PEAK2_HOURS_SUMMER, **_default(defaults.get(CONF_PEAK2_HOURS_SUMMER)))] = (
+                selector.TextSelector()
+            )
         fields[vol.Required(CONF_WEEKEND_OFFPEAK, default=defaults.get(CONF_WEEKEND_OFFPEAK, False))] = (
             selector.BooleanSelector()
         )
@@ -180,7 +195,7 @@ def defaults_from_catalog(conf: dict[str, Any]) -> tuple[dict[str, Any], dict[st
 
 
 def validate_prices(user_input: dict[str, Any]) -> dict[str, str]:
-    for key in (CONF_OFFPEAK_HOURS, CONF_OFFPEAK_HOURS_SUMMER):
+    for key in (CONF_OFFPEAK_HOURS, CONF_OFFPEAK_HOURS_SUMMER, CONF_PEAK2_HOURS, CONF_PEAK2_HOURS_SUMMER):
         try:
             parse_windows(user_input.get(key))
         except ValueError:
@@ -252,8 +267,10 @@ class EnergyWalletOptionsFlow(OptionsFlow):
             self._conf = {**current, **user_input}
             if tariff_changed:
                 # Prices from the previous tariff would be misleading.
-                for key in (CONF_ENERGY_PEAK, CONF_ENERGY_OFFPEAK, CONF_DYNAMIC_MARKUP, CONF_DIST_PEAK,
-                            CONF_DIST_OFFPEAK, CONF_OFFPEAK_HOURS, CONF_OFFPEAK_HOURS_SUMMER, CONF_FIXED_MONTHLY):
+                for key in (CONF_ENERGY_PEAK, CONF_ENERGY_OFFPEAK, CONF_ENERGY_PEAK2, CONF_DYNAMIC_MARKUP,
+                            CONF_DIST_PEAK, CONF_DIST_OFFPEAK, CONF_DIST_PEAK2, CONF_OFFPEAK_HOURS,
+                            CONF_OFFPEAK_HOURS_SUMMER, CONF_PEAK2_HOURS, CONF_PEAK2_HOURS_SUMMER,
+                            CONF_WEEKEND_OFFPEAK, CONF_HOLIDAY_OFFPEAK, CONF_FIXED_MONTHLY):
                     self._conf.pop(key, None)
             return await self.async_step_prices()
         schema = vol.Schema({**entities_schema(current).schema, **tariff_schema(current).schema})
@@ -267,8 +284,9 @@ class EnergyWalletOptionsFlow(OptionsFlow):
             errors = validate_prices(user_input)
             if not errors:
                 data = {**self._conf, **user_input}
-                if CONF_OFFPEAK_HOURS_SUMMER not in user_input:
-                    data.pop(CONF_OFFPEAK_HOURS_SUMMER, None)
+                for key in (CONF_OFFPEAK_HOURS_SUMMER, CONF_PEAK2_HOURS_SUMMER):
+                    if key not in user_input:
+                        data.pop(key, None)
                 return self.async_create_entry(data=data)
             defaults.update(user_input)
         return self.async_show_form(

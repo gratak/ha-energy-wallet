@@ -64,6 +64,20 @@
             "https://elektryka.edu.pl/taryfa-g12w/"
           ],
           "note": "off-peak: one site says 0.4180; 0.4130 matches the published gross 0.5141"
+        },
+        "G13": {
+          "energy": {
+            "peak": null,
+            "peak2": null,
+            "offpeak": null
+          },
+          "fee_monthly": 0.0,
+          "verified": false,
+          "sources": [
+            "https://selectra.pl/dostawcy-energii/tauron/taryfy",
+            "https://elektryka.edu.pl/taryfa-g13/"
+          ],
+          "note": "peak = morning peak, peak2 = afternoon peak, offpeak = remaining hours; published G13 energy prices disagree between sources, so they are left for the user to enter"
         }
       },
       "dynamic": {
@@ -308,6 +322,41 @@
             "https://www.energa.pl/dam/jcr:2bd8b953-519f-4e9a-85f3-c45e4ff9a50a/Stawki-brutto-w-grupach-G-na-rok-2026.pdf"
           ],
           "note": "net = gross / 1.23 matches the gross sheet to the grosz"
+        },
+        "G13": {
+          "offpeak": [
+            "13-16",
+            "21-7"
+          ],
+          "offpeak_summer": [
+            "13-19",
+            "22-7"
+          ],
+          "peak2": [
+            "16-21"
+          ],
+          "peak2_summer": [
+            "19-22"
+          ],
+          "variable": {
+            "peak": 0.2203,
+            "peak2": 0.3898,
+            "offpeak": 0.0392
+          },
+          "fixed_monthly": {
+            "1": 7.38,
+            "3": 10.86
+          },
+          "subscription_monthly": 4.56,
+          "transitional_monthly": 0.0,
+          "weekend_offpeak": true,
+          "holiday_offpeak": true,
+          "verified": true,
+          "sources": [
+            "https://www.energa.pl/dam/jcr:88384a83-a0e1-4d45-a75d-9a3c56cc10c2/Wyciag-z-Taryfy-TD-SA-na-rok-2026-dla-odbiorcow-grup-G.pdf",
+            "https://www.energa.pl/dam/jcr:2bd8b953-519f-4e9a-85f3-c45e4ff9a50a/Stawki-brutto-w-grupach-G-na-rok-2026.pdf"
+          ],
+          "note": "rates and zones (pkt 2.2.2) copied from the TD 2026 tariff extract; morning peak 7-13 all year, afternoon peak 19-22 in summer and 16-21 in winter, weekends and holidays are off-peak all day; gross sheet 0.2710/0.4795/0.0482 = net * 1.23"
         }
       }
     },

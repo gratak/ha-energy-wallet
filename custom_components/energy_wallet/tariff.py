@@ -19,8 +19,11 @@ TARIFF_DIR = Path(__file__).parent / "tariffs"
 
 PEAK = "peak"
 OFFPEAK = "offpeak"
+# G13: PEAK is the morning peak, PEAK2 the afternoon peak, OFFPEAK the remaining hours.
+PEAK2 = "peak2"
 
-# Some DSOs (PGE Dystrybucja) move the afternoon off-peak window in summer.
+# Some DSOs (PGE Dystrybucja) move the afternoon off-peak window in summer;
+# G13 moves its afternoon peak.
 SUMMER_MONTHS = range(4, 10)
 
 
@@ -127,8 +130,12 @@ class PriceConfig:
     dynamic_markup: float = 0.0
     dist_peak: float = 0.0
     dist_offpeak: float = 0.0
+    energy_peak2: float = 0.0
+    dist_peak2: float = 0.0
     offpeak_windows: list[tuple[int, int]] = field(default_factory=list)
     offpeak_windows_summer: list[tuple[int, int]] | None = None
+    peak2_windows: list[tuple[int, int]] = field(default_factory=list)
+    peak2_windows_summer: list[tuple[int, int]] | None = None
     weekend_offpeak: bool = False
     holiday_offpeak: bool = False
     fixed_monthly: float = 0.0
@@ -139,6 +146,10 @@ class PriceConfig:
     def two_zone(self) -> bool:
         return self.tariff_group != "G11"
 
+    @property
+    def three_zone(self) -> bool:
+        return self.tariff_group == "G13"
+
     def zone(self, local_dt: datetime) -> str:
         if not self.two_zone:
             return PEAK
@@ -147,10 +158,13 @@ class PriceConfig:
             return OFFPEAK
         if self.holiday_offpeak and day in polish_holidays(day.year):
             return OFFPEAK
-        windows = self.offpeak_windows
-        if self.offpeak_windows_summer and local_dt.month in SUMMER_MONTHS:
-            windows = self.offpeak_windows_summer
+        summer = local_dt.month in SUMMER_MONTHS
         minute = local_dt.hour * 60 + local_dt.minute
+        if self.three_zone:
+            peak2 = self.peak2_windows_summer if self.peak2_windows_summer and summer else self.peak2_windows
+            if _in_windows(minute, peak2):
+                return PEAK2
+        windows = self.offpeak_windows_summer if self.offpeak_windows_summer and summer else self.offpeak_windows
         return OFFPEAK if _in_windows(minute, windows) else PEAK
 
     def energy_component(self, local_dt: datetime, rce: float | None) -> float | None:
@@ -159,13 +173,21 @@ class PriceConfig:
             if rce is None:
                 return None
             return rce / 1000 + self.dynamic_markup
-        if self.zone(local_dt) == OFFPEAK:
+        zone = self.zone(local_dt)
+        if zone == OFFPEAK:
             return self.energy_offpeak
+        if zone == PEAK2:
+            return self.energy_peak2
         return self.energy_peak
 
     def distribution_component(self, local_dt: datetime) -> float:
         """Variable distribution charges, net PLN/kWh."""
-        return self.dist_offpeak if self.zone(local_dt) == OFFPEAK else self.dist_peak
+        zone = self.zone(local_dt)
+        if zone == OFFPEAK:
+            return self.dist_offpeak
+        if zone == PEAK2:
+            return self.dist_peak2
+        return self.dist_peak
 
     def buy_price(self, local_dt: datetime, rce: float | None = None) -> float | None:
         """Gross PLN/kWh for energy taken from the grid at ``local_dt``.
@@ -227,13 +249,14 @@ def catalog_defaults(
 
     if dynamic:
         offer = seller_data.get("dynamic", {})
-        energy_peak = energy_offpeak = None
+        energy_peak = energy_offpeak = energy_peak2 = None
         markup = offer.get("markup")
     else:
         offer = seller_data.get("tariffs", {}).get(group, {})
         energy = offer.get("energy", {})
         energy_peak = energy.get("peak")
         energy_offpeak = energy.get("offpeak", energy_peak if group == "G11" else None)
+        energy_peak2 = energy.get("peak2")
         markup = None
     if offer:
         sources.extend(offer.get("sources", []))
@@ -247,6 +270,7 @@ def catalog_defaults(
     extras = [per_kwh.get(k) for k in ("quality", "oze", "cogeneration")]
     dist_peak = _sum_known(variable.get("peak"), *extras)
     dist_offpeak = _sum_known(variable.get("offpeak", variable.get("peak") if group == "G11" else None), *extras)
+    dist_peak2 = _sum_known(variable.get("peak2"), *extras)
     if dso_group:
         sources.extend(dso_group.get("sources", []))
         verified &= bool(dso_group.get("verified"))
@@ -270,10 +294,14 @@ def catalog_defaults(
         "excise": common.get("excise_kwh"),
         "energy_peak": energy_peak,
         "energy_offpeak": energy_offpeak,
+        "energy_peak2": energy_peak2,
         "dynamic_markup": markup,
         "dist_peak": dist_peak,
         "dist_offpeak": dist_offpeak,
+        "dist_peak2": dist_peak2,
         "offpeak_hours": ",".join(windows),
+        "peak2_hours": ",".join(dso_group.get("peak2", [])),
+        "peak2_hours_summer": ",".join(dso_group.get("peak2_summer", [])),
         "weekend_offpeak": bool(dso_group.get("weekend_offpeak", False)),
         "holiday_offpeak": bool(dso_group.get("holiday_offpeak", False)),
         "fixed_monthly": fixed_monthly,

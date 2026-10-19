@@ -2,7 +2,7 @@
 
 ![Energy Wallet: ile kupiłeś, ile sprzedałeś, w złotówkach co 15 minut](docs/hero.png)
 
-Integracja i karta pokazujące, **za ile kupiłeś energię z sieci i za ile ją sprzedałeś**. Każda kWh jest wyceniana po cenie z chwili, w której przepłynęła przez licznik: cena dynamiczna albo strefa taryfy G11/G12/G12w przy zakupie, RCE z PSE przy sprzedaży (net-billing).
+Integracja i karta pokazujące, **za ile kupiłeś energię z sieci i za ile ją sprzedałeś**. Każda kWh jest wyceniana po cenie z chwili, w której przepłynęła przez licznik: cena dynamiczna albo strefa taryfy G11/G12/G12w/G13 przy zakupie, RCE z PSE przy sprzedaży (net-billing).
 
 <p>
   <img src="docs/card-light.png" alt="Karta w jasnym motywie, widok dzienny" width="49%">
@@ -17,7 +17,7 @@ Integracja i karta pokazujące, **za ile kupiłeś energię z sieci i za ile ją
 - Pobiera **RCE z API PSE** (`api.raporty.pse.pl`, okresy 15-minutowe, ceny na jutro zwykle po ok. 14:00).
 - Przypisuje każdy przyrost energii do 15-minutowego okresu i wycenia go:
   - **zakup** = (cena energii + akcyza + zmienne opłaty dystrybucyjne) × (1 + VAT).
-    - Taryfa stała: cena zależy od strefy (G11 / G12 / G12w, z weekendami i świętami).
+    - Taryfa stała: cena zależy od strefy (G11 / G12 / G12w / G13, z weekendami i świętami).
     - Taryfa dynamiczna: cena energii = RCE + marża sprzedawcy.
   - **sprzedaż** = RCE okresu (ujemne liczone jako 0, opcjonalnie), albo RCEm (średnia miesięczna).
 - Wystawia sensory dla okresów *dziś / miesiąc / rok*, sumy całkowite, aktualne ceny i prognozę cen. Dorzuca do tego kartę Lovelace.
@@ -43,11 +43,12 @@ show_chart: true
 ## Konfiguracja
 
 1. **Liczniki.** Integracja podpowiada encje: najpierw z ustawień Energy Dashboard (sieć: pobór i oddanie), a jeśli ich tam nie ma, zgaduje po nazwach (`buy/import/purchase` oraz `sell/export/feed-in`). Liczniki dzienne, miesięczne i chmurowe (`station`) są pomijane.
-2. **Sprzedawca i taryfa.** Wybierasz sprzedawcę, grupę taryfową (G11/G12/G12w), cenę dynamiczną, dystrybutora (OSD), liczbę faz i sposób rozliczenia sprzedaży (RCE albo RCEm).
+2. **Sprzedawca i taryfa.** Wybierasz sprzedawcę, grupę taryfową (G11/G12/G12w/G13), cenę dynamiczną, dystrybutora (OSD), liczbę faz i sposób rozliczenia sprzedaży (RCE albo RCEm).
 3. **Ceny.** Pola są wypełnione danymi z `tariffs/<rok>.json`, jeśli integracja je ma. Puste pola trzeba przepisać z umowy lub taryfy. Wszystkie ceny wpisujesz **netto**:
    - *zmienne opłaty dystrybucyjne* = opłata sieciowa zmienna + jakościowa + OZE + kogeneracyjna (zł/kWh),
    - *opłaty stałe* = handlowa + sieciowa stała + abonamentowa + mocowa (według wybranego progu zużycia) + przejściowa (zł/mies.). Są pokazywane osobno i nie wchodzą do bilansu.
    - PGE Dystrybucja przesuwa latem (kwiecień–wrzesień) popołudniową strefę tańszą na 15–17; służy do tego pole *godziny strefy tańszej latem*.
+   - G13 (TAURON) ma trzy strefy: szczyt przedpołudniowy (pola *strefa dzienna / szczyt przedpołudniowy*), szczyt popołudniowy (osobne pola cen i *godziny szczytu popołudniowego*, zima 16–21, lato 19–22) i pozostałe godziny (pola *strefa tańsza*, zima 13–16 i 21–7, lato 13–19 i 22–7, a także całe weekendy i święta). Godziny poza szczytem popołudniowym i strefą tańszą liczą się jako szczyt przedpołudniowy.
 
 Wszystko da się później zmienić w opcjach integracji. Zmiana taryfy czyści stare ceny, żeby nie zostały przypadkiem.
 
@@ -55,16 +56,16 @@ Wszystko da się później zmienić w opcjach integracji. Zmiana taryfy czyści 
 
 Stan na 14.10.2026 (`tariffs/2026.json`, ceny netto):
 
-| | G11 | G12 | G12w | Strefy | Opłaty stałe |
-|---|---|---|---|---|---|
-| **TAURON Dystrybucja** | ✅ | ✅ | ✅ | 13–15, 22–6 | ✅ |
-| **PGE Dystrybucja** | ✅ | ✅ | ✅ | zima 13–15, lato 15–17; 22–6 | ✅ |
-| **Enea Operator** | ✅ | ✅ | ✅ | G12: 13–15, 22–6 ⚠️; G12w: 21–6 | bez abonamentowej |
-| **Energa Operator** | ✅ | ✅ | ✅ | 13–15, 22–6 | częściowo |
-| **Stoen Operator** | ✅ | ✅ | — | 22–6 | częściowo |
-| **Sprzedawcy z urzędu** (Tauron, PGE, Enea, Energa) | ✅ | ✅ | ✅ | | opłata handlowa: Tauron/PGE 0 zł |
-| **Oferty dynamiczne** (marża, opłata) | Tauron, PGE, Enea, Energa | | | | ✅ |
-| **E.ON** | — (ceny spoza taryfy URE) | | | | |
+| | G11 | G12 | G12w | G13 | Strefy | Opłaty stałe |
+|---|---|---|---|---|---|---|
+| **TAURON Dystrybucja** | ✅ | ✅ | ✅ | ✅ | 13–15, 22–6; G13: szczyty 7–13 i zima 16–21 / lato 19–22 | ✅ |
+| **PGE Dystrybucja** | ✅ | ✅ | ✅ | — | zima 13–15, lato 15–17; 22–6 | ✅ |
+| **Enea Operator** | ✅ | ✅ | ✅ | — | G12: 13–15, 22–6 ⚠️; G12w: 21–6 | bez abonamentowej |
+| **Energa Operator** | ✅ | ✅ | ✅ | — | 13–15, 22–6 | częściowo |
+| **Stoen Operator** | ✅ | ✅ | — | — | 22–6 | częściowo |
+| **Sprzedawcy z urzędu** (Tauron, PGE, Enea, Energa) | ✅ | ✅ | ✅ | Tauron: ceny do wpisania | | opłata handlowa: Tauron/PGE 0 zł |
+| **Oferty dynamiczne** (marża, opłata) | Tauron, PGE, Enea, Energa | | | | | ✅ |
+| **E.ON** | — (ceny spoza taryfy URE) | | | | | |
 
 Wspólne dla wszystkich: opłata jakościowa 0,0332, OZE 0,0073, kogeneracyjna 0,0030 zł/kWh, akcyza 0,005 zł/kWh, opłata mocowa według progu rocznego zużycia (4,29 / 10,31 / 17,18 / 24,05 zł/mies.).
 
@@ -164,6 +165,6 @@ Logika (`tariff.py`, `wallet.py`, `pse.py`, `detect.py`) nie zależy od Home Ass
 
 ## English
 
-Home Assistant integration and card showing **what grid energy cost you and what your exports earned** in Poland. It reads cumulative grid import/export counters from any inverter or meter, prices each 15-minute slot with PSE RCE (sale and dynamic tariffs) or fixed G11/G12/G12w zone prices plus distribution charges, and exposes today/month/year cost, revenue and balance sensors plus a Lovelace card. Tariff data for Polish sellers and DSOs is bundled where known (`tariffs/<year>.json`, flagged as unverified) and asked for in the config flow otherwise. Contributions of verified tariff data are welcome.
+Home Assistant integration and card showing **what grid energy cost you and what your exports earned** in Poland. It reads cumulative grid import/export counters from any inverter or meter, prices each 15-minute slot with PSE RCE (sale and dynamic tariffs) or fixed G11/G12/G12w/G13 zone prices plus distribution charges, and exposes today/month/year cost, revenue and balance sensors plus a Lovelace card. Tariff data for Polish sellers and DSOs is bundled where known (`tariffs/<year>.json`, flagged as unverified) and asked for in the config flow otherwise. Contributions of verified tariff data are welcome.
 
 License: MIT.

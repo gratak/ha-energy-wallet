@@ -97,6 +97,35 @@ async def test_config_flow_detects_and_creates(hass: HomeAssistant, setup_states
     await hass.async_block_till_done()
 
 
+async def test_config_flow_g13_asks_for_three_zones(hass: HomeAssistant, setup_states, aioclient_mock) -> None:
+    aioclient_mock.get(PSE_RCE_URL, json={"value": []})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"import_entity": IMP, "export_entity": EXP})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"seller": "tauron", "tariff_group": "G13", "dynamic": False, "dso": "tauron_dystrybucja", "phases": "3", "capacity_tier": "1200_2800", "sale_mode": "rce"},
+    )
+    assert result["step_id"] == "prices"
+    schema = {str(k): k for k in result["data_schema"].schema}
+    assert {"energy_peak2", "dist_peak2", "peak2_hours", "peak2_hours_summer", "energy_offpeak", "dist_offpeak"} <= set(schema)
+    assert schema["peak2_hours"].default() == "16-21"
+    assert schema["peak2_hours_summer"].default() == "19-22"
+
+    prices = {"energy_peak": 0.5, "energy_peak2": 0.8, "energy_offpeak": 0.4, "dist_peak": 0.26, "dist_peak2": 0.43,
+              "dist_offpeak": 0.08, "offpeak_hours": "13-16,21-7", "offpeak_hours_summer": "13-19,22-7",
+              "peak2_hours": "afternoon", "weekend_offpeak": True, "holiday_offpeak": True, "fixed_monthly": 32.6,
+              "vat": 0.23, "deposit_multiplier": 1.0, "clamp_negative_rce": True}
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], prices)
+    assert result["errors"] == {"peak2_hours": "invalid_hours"}
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**prices, "peak2_hours": "16-21", "peak2_hours_summer": "19-22"}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"]["tariff_group"] == "G13"
+    assert result["data"]["energy_peak2"] == 0.8
+    await hass.async_block_till_done()
+
+
 async def test_wallet_counts_money(hass: HomeAssistant, setup_states, aioclient_mock, freezer: FrozenDateTimeFactory) -> None:
     freezer.move_to("2026-10-14T10:02:00+00:00")
     today = dt_util.now().date().isoformat()
@@ -195,6 +224,29 @@ async def test_options_flow_resets_prices_on_tariff_change(hass: HomeAssistant, 
     await hass.async_block_till_done()
     assert entry.options["dynamic"] is True
     assert entry.runtime_data.prices.dynamic_markup == pytest.approx(0.06)
+
+
+async def test_options_flow_g12_to_g13_takes_zone_flags_from_catalog(hass: HomeAssistant, setup_states, aioclient_mock) -> None:
+    aioclient_mock.get(PSE_RCE_URL, json={"value": []})
+    g12 = {**BASE, "tariff_group": "G12", "energy_offpeak": 0.4, "dist_offpeak": 0.1, "offpeak_hours": "13-15,22-6",
+           "weekend_offpeak": False, "holiday_offpeak": False}
+    entry = MockConfigEntry(domain=DOMAIN, data=g12, title="Energy Wallet")
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {"import_entity": IMP, "export_entity": EXP, "seller": "tauron", "tariff_group": "G13", "dynamic": False,
+         "dso": "tauron_dystrybucja", "phases": "3", "capacity_tier": "1200_2800", "sale_mode": "rce"},
+    )
+    keys = {str(k): k for k in result["data_schema"].schema}
+    # The G12 entry had weekends on peak; G13 counts weekends and holidays as off-peak.
+    assert keys["weekend_offpeak"].default() is True
+    assert keys["holiday_offpeak"].default() is True
+    assert keys["offpeak_hours"].default() == "13-16,21-7"
+    assert keys["peak2_hours"].default() == "16-21"
 
 
 async def test_card_registered_when_frontend_loads_later(hass: HomeAssistant, setup_states, aioclient_mock) -> None:

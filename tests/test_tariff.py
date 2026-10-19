@@ -6,6 +6,7 @@ import pytest
 from custom_components.energy_wallet.tariff import (
     OFFPEAK,
     PEAK,
+    PEAK2,
     PriceConfig,
     catalog_defaults,
     easter_sunday,
@@ -95,6 +96,59 @@ def test_g11_ignores_windows():
     assert cfg.zone(datetime(2026, 10, 14, 23, tzinfo=WAW)) == PEAK
 
 
+def g13():
+    return PriceConfig(
+        tariff_group="G13",
+        energy_peak=0.5,
+        energy_peak2=0.8,
+        energy_offpeak=0.4,
+        dist_peak=0.2,
+        dist_peak2=0.4,
+        dist_offpeak=0.05,
+        offpeak_windows=parse_windows("13-16,21-7"),
+        offpeak_windows_summer=parse_windows("13-19,22-7"),
+        peak2_windows=parse_windows("16-21"),
+        peak2_windows_summer=parse_windows("19-22"),
+        weekend_offpeak=True,
+        holiday_offpeak=True,
+        vat=0.23,
+    )
+
+
+@pytest.mark.parametrize(
+    ("month", "day", "hour", "zone"),
+    [
+        # Winter weekday (Wednesday 2026-10-14): 7-13 morning, 16-21 afternoon peak.
+        (10, 14, 6, OFFPEAK), (10, 14, 7, PEAK), (10, 14, 12, PEAK), (10, 14, 13, OFFPEAK), (10, 14, 15, OFFPEAK),
+        (10, 14, 16, PEAK2), (10, 14, 20, PEAK2), (10, 14, 21, OFFPEAK),
+        # Summer weekday (Tuesday 2026-07-14): 7-13 morning, 19-22 afternoon peak.
+        (7, 14, 7, PEAK), (7, 14, 13, OFFPEAK), (7, 14, 17, OFFPEAK), (7, 14, 19, PEAK2), (7, 14, 21, PEAK2),
+        (7, 14, 22, OFFPEAK),
+    ],
+)
+def test_g13_zones(month, day, hour, zone):
+    assert g13().zone(datetime(2026, month, day, hour, tzinfo=WAW)) == zone
+
+
+def test_g13_weekend_and_holiday_are_offpeak():
+    cfg = g13()
+    assert cfg.zone(datetime(2026, 10, 17, 10, tzinfo=WAW)) == OFFPEAK  # Saturday morning
+    assert cfg.zone(datetime(2026, 10, 18, 18, tzinfo=WAW)) == OFFPEAK  # Sunday afternoon
+    assert cfg.zone(datetime(2026, 11, 11, 17, tzinfo=WAW)) == OFFPEAK  # Independence Day
+
+
+def test_g13_buy_price_per_zone():
+    cfg = g13()
+    assert cfg.buy_price(datetime(2026, 10, 14, 10, tzinfo=WAW)) == pytest.approx((0.5 + 0.005 + 0.2) * 1.23)
+    assert cfg.buy_price(datetime(2026, 10, 14, 17, tzinfo=WAW)) == pytest.approx((0.8 + 0.005 + 0.4) * 1.23)
+    assert cfg.buy_price(datetime(2026, 10, 14, 23, tzinfo=WAW)) == pytest.approx((0.4 + 0.005 + 0.05) * 1.23)
+
+
+def test_g12_ignores_peak2_windows():
+    cfg = g12(peak2_windows=parse_windows("16-21"), energy_peak2=9.0)
+    assert cfg.zone(datetime(2026, 10, 14, 17, tzinfo=WAW)) == PEAK
+
+
 def test_sell_price():
     assert sell_price(350) == pytest.approx(0.35)
     assert sell_price(-50) == 0
@@ -131,6 +185,26 @@ def test_catalog_pge_summer_and_unknowns_stay_none():
     stoen = catalog_defaults(load_catalog(2026), "eon", "stoen_operator", "G12w", False, 3)
     assert stoen["dist_peak"] is None
     assert stoen["energy_peak"] is None
+
+
+def test_catalog_tauron_g13():
+    d = catalog_defaults(load_catalog(2026), "tauron", "tauron_dystrybucja", "G13", False, 3, "1200_2800")
+    extras = 0.0332 + 0.0073 + 0.0030
+    assert d["dist_peak"] == pytest.approx(0.2203 + extras)
+    assert d["dist_peak2"] == pytest.approx(0.3898 + extras)
+    assert d["dist_offpeak"] == pytest.approx(0.0392 + extras)
+    assert d["offpeak_hours"] == "13-16,21-7"
+    assert d["offpeak_hours_summer"] == "13-19,22-7"
+    assert d["peak2_hours"] == "16-21"
+    assert d["peak2_hours_summer"] == "19-22"
+    assert d["weekend_offpeak"] is True
+    assert d["holiday_offpeak"] is True
+    # Energy prices are not bundled yet, so the user has to type them in.
+    assert d["energy_peak"] is None
+    assert d["energy_peak2"] is None
+    assert d["energy_offpeak"] is None
+    assert d["fixed_monthly"] == pytest.approx(32.60)
+    assert d["verified"] is False
 
 
 def test_catalog_net_gross_consistency():
