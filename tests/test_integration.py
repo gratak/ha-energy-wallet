@@ -212,3 +212,46 @@ async def test_card_registered_when_frontend_loads_later(hass: HomeAssistant, se
     hass.bus.async_fire(EVENT_COMPONENT_LOADED, {"component": "frontend"})
     await hass.async_block_till_done()
     assert hass.data[DATA_EXTRA_MODULE_URL].urls == {"/energy_wallet/energy-wallet-card.js?v=0.1.2"}
+
+
+async def test_card_added_to_lovelace_resources(hass: HomeAssistant, setup_states, aioclient_mock) -> None:
+    from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL, UrlManager
+    from homeassistant.setup import async_setup_component
+
+    hass.data[DATA_EXTRA_MODULE_URL] = UrlManager(lambda *_: None, [])
+    hass.config.components.add("frontend")
+
+    aioclient_mock.get(PSE_RCE_URL, json={"value": []})
+    assert await async_setup_component(hass, "lovelace", {})
+    resources = hass.data["lovelace"].resources
+    await resources.async_get_info()
+    other = await resources.async_create_item({"res_type": "module", "url": "/hacsfiles/other-card.js"})
+    old = await resources.async_create_item({"res_type": "module", "url": "/energy_wallet/energy-wallet-card.js?v=0.0.9"})
+
+    entry = MockConfigEntry(domain=DOMAIN, data=BASE, title="Energy Wallet")
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    # The stale version is updated in place, not duplicated; other resources stay.
+    urls = {item["id"]: item["url"] for item in resources.async_items()}
+    assert urls == {other["id"]: "/hacsfiles/other-card.js", old["id"]: "/energy_wallet/energy-wallet-card.js?v=0.1.2"}
+    # Loaded only as a resource: an early extra JS import can lose its element.
+    assert not hass.data[DATA_EXTRA_MODULE_URL].urls
+
+
+async def test_card_not_added_to_yaml_resources(hass: HomeAssistant, setup_states, aioclient_mock) -> None:
+    from homeassistant.setup import async_setup_component
+
+    aioclient_mock.get(PSE_RCE_URL, json={"value": []})
+    from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL, UrlManager
+
+    hass.data[DATA_EXTRA_MODULE_URL] = UrlManager(lambda *_: None, [])
+    hass.config.components.add("frontend")
+    assert await async_setup_component(hass, "lovelace", {"lovelace": {"mode": "yaml", "resources": []}})
+    entry = MockConfigEntry(domain=DOMAIN, data=BASE, title="Energy Wallet")
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.data["lovelace"].resources.async_items() == []
+    assert hass.data[DATA_EXTRA_MODULE_URL].urls == {"/energy_wallet/energy-wallet-card.js?v=0.1.2"}

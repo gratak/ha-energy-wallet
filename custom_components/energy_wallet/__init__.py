@@ -11,7 +11,7 @@ from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_COMPONENT_LOADED, Platform
-from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
+from homeassistant.core import Event, HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv, issue_registry as ir
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
@@ -60,18 +60,44 @@ async def _register_card(hass: HomeAssistant) -> None:
     version = (await async_get_integration(hass, DOMAIN)).version
     url = f"{FRONTEND_URL}?v={version}"
 
-    if "frontend" in hass.config.components:
+    # Prefer a Lovelace resource: dashboards load resources after the frontend has set up
+    # its custom element registry. An extra JS module is imported as soon as the page
+    # loads, can run before that, and its element is then missing ("Custom element
+    # doesn't exist"); the page also misses it when opened while Home Assistant starts.
+    # The extra JS URL stays as the fallback for YAML-mode resources.
+    loaded = {"frontend", "lovelace"} & hass.config.components
+    if "lovelace" in loaded and await _register_lovelace_resource(hass, url):
+        return
+    if "frontend" in loaded:
         add_extra_js_url(hass, url)
         return
 
     # The frontend may finish loading after this integration; register then.
-    @callback
-    def _frontend_loaded(event: Event) -> None:
-        if event.data.get("component") == "frontend":
+    async def _component_loaded(event: Event) -> None:
+        if event.data.get("component") != "frontend":
+            return
+        unsub()
+        if "lovelace" not in hass.config.components or not await _register_lovelace_resource(hass, url):
             add_extra_js_url(hass, url)
-            unsub()
 
-    unsub = hass.bus.async_listen(EVENT_COMPONENT_LOADED, _frontend_loaded)
+    unsub = hass.bus.async_listen(EVENT_COMPONENT_LOADED, _component_loaded)
+
+
+async def _register_lovelace_resource(hass: HomeAssistant, url: str) -> bool:
+    """Add the card to Lovelace resources, or update its version, in storage mode."""
+    data = hass.data.get("lovelace")
+    if data is None or getattr(data, "resource_mode", None) != "storage":
+        return False  # YAML resources are the user's to manage.
+    resources = data.resources
+    await resources.async_get_info()  # Loads the stored collection.
+    for item in resources.async_items():
+        if item["url"].split("?")[0] != FRONTEND_URL:
+            continue
+        if item["url"] != url:
+            await resources.async_update_item(item["id"], {"res_type": "module", "url": url})
+        return True
+    await resources.async_create_item({"res_type": "module", "url": url})
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: EnergyWalletConfigEntry) -> bool:

@@ -3,7 +3,8 @@
   "name": "Energy Wallet",
   "after_dependencies": [
     "energy",
-    "frontend"
+    "frontend",
+    "lovelace"
   ],
   "codeowners": [
     "@gratak"
